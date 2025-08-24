@@ -563,11 +563,12 @@ local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
 local teleportLocations = {
-    ["Kohana Volcano"] = {
-        {pos = Vector3.new(-629.3, 30.0, 99.0), lookDir = Vector3.new(0, 0, -1)}, -- hadap N
-        {pos = Vector3.new(-629.3, 30.0, 99.8), lookDir = Vector3.new(0, 0, -1)},
-        {pos = Vector3.new(-629.3, 30.0, 99.6), lookDir = Vector3.new(0, 0, -1)},
-        {pos = Vector3.new(-629.3, 30.0, 99.4), lookDir = Vector3.new(0, 0, -1)},
+    ["Fisherman Island"] = {
+        {pos = Vector3.new(-100.0, 18.5, 2814.8), lookDir = Vector3.new(0, 0, -1)}, -- hadap N
+        {pos = Vector3.new(-92.9, 18.5, 2814.4), lookDir = Vector3.new(0, 0, -1)},
+        {pos = Vector3.new(-83.6, 18.5, 2814.4), lookDir = Vector3.new(0, 0, -1)},
+        {pos = Vector3.new(-60.7, 3.5, 2748.4), lookDir = Vector3.new(0, 0, -1)},
+        {pos = Vector3.new(-4.2, 2.6, 2775.0), lookDir = Vector3.new(0, 0, -1)},
     },
     ["Crater Island"] = {
         {pos = Vector3.new(987.6, 1.7, 5141.6), lookDir = Vector3.new(0, 0, -1)}, -- hadap N
