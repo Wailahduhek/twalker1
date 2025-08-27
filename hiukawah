@@ -168,6 +168,26 @@ tabBar:GetPropertyChangedSignal("Position"):Connect(updateLines)
 -- =========================================================
 -- AUTO FISH LOGIC
 -- =========================================================
+
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
+
+local function stopAll()
+    for _, t in pairs(animator:GetPlayingAnimationTracks()) do
+        t:Stop()
+    end
+end
+local function playAnimation(animId)
+    stopAll()
+    local animation = Instance.new("Animation")
+    animation.AnimationId = animId
+    local track = animator:LoadAnimation(animation)
+    track:Play()
+    return track
+end
+
 local catchCount = 0 -- counter tangkapan
 
 local function sellAllFish(statusLabel)
@@ -206,11 +226,13 @@ local function startFishing(statusLabel)
                     local timestamp = perfectCast and 9999999999 or (tick() + math.random())
                     rodRemote:InvokeServer(timestamp)
                     task.wait(0.1)
+                    local reelTrack = playAnimation("rbxassetid://134965425664034")
                     miniGameRemote:InvokeServer(-1.238,0.969)
                     task.wait(0.3)
                     local baitConn = baitRemote.OnClientEvent:Connect(function() end)
                     local fishConn = fishRemote.OnClientEvent:Connect(function() end)
                     task.wait(finishDelay)
+                    reelTrack:Stop()
                     finishRemote:FireServer()
                     baitConn:Disconnect()
                     fishConn:Disconnect()
@@ -234,7 +256,6 @@ local function stopFishing(statusLabel)
     statusLabel.Text = "Status: X Not Running"
     statusLabel.TextColor3 = Color3.fromRGB(255, 120, 120)
 end
-
 -- =========================================================
 -- AUTO FISH TAB UI
 -- =========================================================
@@ -451,7 +472,7 @@ createButton("Auto Weather", 120, function()
                 end
             end
 
-            local allowedWeathers = {["Snow"]=true, ["Storm"]=true, ["Wind"]=true}
+            local allowedWeathers = {["Radiant"]=true, ["Storm"]=true, ["Wind"]=true}
             local autoWeatherWeathers = {}
             for _, w in ipairs(weathers) do
                 if allowedWeathers[w.Name] then
