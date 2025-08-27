@@ -107,15 +107,26 @@ local function createTab(name, emoji, order)
     btn.BackgroundColor3 = Color3.fromRGB(40,0,80)
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
 
-    local frame = Instance.new("Frame", mainFrame)
+    -- 🔽 ganti ke ScrollingFrame
+    local frame = Instance.new("ScrollingFrame", mainFrame)
     frame.Size = UDim2.new(1, -20, 1, -80)
     frame.Position = UDim2.new(0, 10, 0, 70)
     frame.BackgroundTransparency = 1
     frame.Visible = false
+    frame.BorderSizePixel = 0
+    frame.ScrollBarThickness = 6
+    frame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    frame.CanvasSize = UDim2.new(0,0,0,0)
+
+    -- 🔽 biar isinya otomatis ke bawah
+    local layout = Instance.new("UIListLayout", frame)
+    layout.Padding = UDim.new(0, 5)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
 
     tabs[name] = btn
     contents[name] = frame
 end
+
 
 createTab("AutoFish", "", 1)
 createTab("Teleport", "", 2)
@@ -133,12 +144,25 @@ for name,btn in pairs(tabs) do
     btn.MouseButton1Click:Connect(function() switchTab(name) end)
 end
 
--- Garis pemisah hitam di bawah tab bar
-local tabLine = Instance.new("Frame", mainFrame)
-tabLine.Size = UDim2.new(1, -20, 0, 2)
-tabLine.Position = UDim2.new(0, 10, 0, 70)
-tabLine.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-tabLine.BorderSizePixel = 0
+local tabLineTop = Instance.new("Frame", mainFrame)
+tabLineTop.Size = UDim2.new(1, -20, 0, 2)
+tabLineTop.Position = UDim2.new(0, 10, 0, tabBar.Position.Y.Offset - 2)
+tabLineTop.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+tabLineTop.BorderSizePixel = 0
+
+local tabLineBottom = Instance.new("Frame", mainFrame)
+tabLineBottom.Size = UDim2.new(1, -20, 0, 2)
+tabLineBottom.Position = UDim2.new(0, 10, 0, tabBar.Position.Y.Offset + tabBar.Size.Y.Offset + 2)
+tabLineBottom.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+tabLineBottom.BorderSizePixel = 0
+
+local function updateLines()
+    tabLineTop.Position = UDim2.new(0, 10, 0, tabBar.Position.Y.Offset - 2)
+    tabLineBottom.Position = UDim2.new(0, 10, 0, tabBar.Position.Y.Offset + tabBar.Size.Y.Offset + 2)
+end
+
+tabBar:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateLines)
+tabBar:GetPropertyChangedSignal("Position"):Connect(updateLines)
 
 
 -- =========================================================
@@ -164,8 +188,8 @@ local function sellAllFish(statusLabel)
     statusLabel.Text = "Status: ✔ Running"
     statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
 end
--- Variabel global delay sebelum finish
-local finishDelay = 1.2 -- default 1 detik
+
+local finishDelay = 1 
 
 local function startFishing(statusLabel)
     if autofish then return end
@@ -179,27 +203,20 @@ local function startFishing(statusLabel)
             task.wait(1)
             while autofish do
                 pcall(function()
-                    -- lempar pancing
                     local timestamp = perfectCast and 9999999999 or (tick() + math.random())
                     rodRemote:InvokeServer(timestamp)
                     task.wait(0.1)
-
-                    -- auto minigame
                     miniGameRemote:InvokeServer(-1.238,0.969)
                     task.wait(0.3)
-
-                    -- event fish
                     local baitConn = baitRemote.OnClientEvent:Connect(function() end)
                     local fishConn = fishRemote.OnClientEvent:Connect(function() end)
                     task.wait(finishDelay)
                     finishRemote:FireServer()
                     baitConn:Disconnect()
                     fishConn:Disconnect()
-
                     catchCount += 1
                     statusLabel.Text = "Status: Catch " .. catchCount
                     statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
-
                     if catchCount >= 1000 then
                         sellAllFish(statusLabel)
                         catchCount = 0
@@ -214,7 +231,7 @@ end
 
 local function stopFishing(statusLabel)
     autofish = false
-    statusLabel.Text = "Status: ✘ Not Running"
+    statusLabel.Text = "Status: X Not Running"
     statusLabel.TextColor3 = Color3.fromRGB(255, 120, 120)
 end
 
@@ -226,7 +243,7 @@ local autoTab = contents["AutoFish"]
 local statusLabel = Instance.new("TextLabel", autoTab)
 statusLabel.Size = UDim2.new(1, 0, 0, 25)
 statusLabel.Position = UDim2.new(0, 0, 0, 10)
-statusLabel.Text = "Status: ✘ Not Running"
+statusLabel.Text = "Status: X Not Running"
 statusLabel.TextColor3 = Color3.fromRGB(255, 120, 120)
 statusLabel.BackgroundTransparency = 1
 statusLabel.Font = Enum.Font.Gotham
@@ -249,7 +266,7 @@ createButton("✔ Start Fishing", 40, function()
     startFishing(statusLabel)
 end, autoTab)
 
-createButton("✘ Stop Fishing", 80, function()
+createButton("X Stop Fishing", 80, function()
     stopFishing(statusLabel)
 end, autoTab)
 
@@ -306,15 +323,25 @@ createButton("Ocean", 80, function()
     ))
 end, tpTab)
 
-createButton("Rod Shop 8M", 120, function()
+createButton("Sisyphus", 120, function()
     local plr = game.Players.LocalPlayer
     plr.Character:SetPrimaryPartCFrame(CFrame.new(Vector3.new(-3794.81, -141.66 + 0.5, -1343.26)))
 end, tpTab)
 
+createButton("Rod Shop 3M", 160, function()
+    local plr = game.Players.LocalPlayer
+    plr.Character:SetPrimaryPartCFrame(CFrame.new(Vector3.new(-3794.81, -141.66 + 0.5, -1343.26)))
+end, tpTab)
 
--- Settings
+createButton("Rod Shop 8M", 200, function()
+    local plr = game.Players.LocalPlayer
+    plr.Character:SetPrimaryPartCFrame(CFrame.new(Vector3.new(-3794.81, -141.66 + 0.5, -1343.26)))
+end, tpTab)
+
+-- Settings Tab
 local setTab = contents["Settings"]
 
+-- Function buat bikin tombol
 local function createButton(text, posY, callback, parent)
     local btn = Instance.new("TextButton", parent)
     btn.Size = UDim2.new(1, 0, 0, 30)
@@ -326,55 +353,56 @@ local function createButton(text, posY, callback, parent)
     btn.TextSize = 14
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
     btn.MouseButton1Click:Connect(callback)
+    return btn
 end
 
--- Tombol 1: Rejoin Server
-createButton("Rejoin Server", 40, function()
-    repeat task.wait() until game.CoreGui:FindFirstChild("RobloxPromptGui")
-    local ts = game:GetService("TeleportService")
-    local lp = game:GetService("Players").LocalPlayer
-    local po = game.CoreGui.RobloxPromptGui.promptOverlay
-    po.ChildAdded:Connect(function(a)
-        if a.Name == "ErrorPrompt" then
-            while true do
-                ts:Teleport(game.PlaceId)
-                task.wait(2)
-            end
-        end
-    end)
-    ts:Teleport(game.PlaceId, lp)
-end, setTab)
-
--- Tombol 2: Sell All Fish
-createButton("Sell All Fish", 80, function()
-    local net = game:GetService("ReplicatedStorage"):WaitForChild("Packages")
-        :WaitForChild("_Index")
-        :WaitForChild("sleitnick_net@0.2.0")
-        :WaitForChild("net")
-    local sellRemote = net:WaitForChild("RF/SellAllItems")
-    pcall(function()
-        sellRemote:InvokeServer()
-        autoSellLabel.Text = "✅ Items Sold!"
-    	task.wait(2)
-    	autoSellLabel.Text = "Click to Sell All"
-    end)
-end, setTab)
-
--- Auto Weather
+-- 🔹 Label status Auto Weather (paling atas Y = 10)
 local autoWeather = false
 local autoWeatherLabel = Instance.new("TextLabel", setTab)
 autoWeatherLabel.Size = UDim2.new(1, 0, 0, 25)
-autoWeatherLabel.Position = UDim2.new(0, 0, 0, 10) -- di bawah tombol Auto Weather
+autoWeatherLabel.Position = UDim2.new(0, 0, 0, 10)
 autoWeatherLabel.Text = "Status: 🔴 Off"
 autoWeatherLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 autoWeatherLabel.BackgroundTransparency = 1
 autoWeatherLabel.Font = Enum.Font.Gotham
 autoWeatherLabel.TextSize = 14
 
--- Buat tombol Auto Weather
+-- 🔹 Helper function update label
+local function updateAutoWeatherLabel(tempText, duration)
+    if tempText then
+        autoWeatherLabel.Text = tempText
+        if duration then
+            task.delay(duration, function()
+                autoWeatherLabel.Text = autoWeather and "Status: 🟢 On" or "Status: 🔴 Off"
+            end)
+        end
+    else
+        autoWeatherLabel.Text = autoWeather and "Status: 🟢 On" or "Status: 🔴 Off"
+    end
+end
+
+-- Button 1: Rejoin Server (mulai dari Y = 40)
+createButton("Rejoin Server", 40, function()
+    local ts = game:GetService("TeleportService")
+    local lp = game:GetService("Players").LocalPlayer
+    ts:Teleport(game.PlaceId, lp)
+end, setTab)
+
+-- Button 2: Sell All Fish (Y = 80)
+createButton("Sell All Fish", 80, function()
+    local net = game:GetService("ReplicatedStorage"):WaitForChild("Packages")
+        :WaitForChild("_Index"):WaitForChild("sleitnick_net@0.2.0"):WaitForChild("net")
+    local sellRemote = net:WaitForChild("RF/SellAllItems")
+    pcall(function()
+        sellRemote:InvokeServer()
+        updateAutoWeatherLabel("✅ Items Sold!", 2)
+    end)
+end, setTab)
+
+-- Button 3: Auto Weather (Y = 120)
 createButton("Auto Weather", 120, function()
     autoWeather = not autoWeather
-    autoWeatherLabel.Text = autoWeather and "Status: 🟢 On" or "Status: 🔴 Off"
+    updateAutoWeatherLabel()
 
     if autoWeather then
         task.spawn(function()
@@ -420,42 +448,38 @@ createButton("Auto Weather", 120, function()
     end
 end, setTab)
 
-
 -- Misc tab
 local MiscTab = contents["Misc"]
 
-local MiscLabel = Instance.new("TextLabel", MiscTab)
-MiscLabel.Size = UDim2.new(1,0,0,20)
-MiscLabel.Position = UDim2.new(0,0,0,10)
-MiscLabel.Text = "AutoFishing On Fish It Made by Tole Walker"
-MiscLabel.TextColor3 = Color3.fromRGB(180,180,255)
-MiscLabel.BackgroundTransparency = 1
-MiscLabel.Font = Enum.Font.Gotham
-MiscLabel.TextSize = 14
+-- Container buat baris "Finish Delay"
+local delayRow = Instance.new("Frame", MiscTab)
+delayRow.Size = UDim2.new(1, 0, 0, 25)
+delayRow.BackgroundTransparency = 1
 
--- Label pengaturan delay
-local delayLabel = Instance.new("TextLabel", MiscTab)
-delayLabel.Size = UDim2.new(0,150,0,20)
-delayLabel.Position = UDim2.new(0,0,0,40)
+-- Label pengaturan delay (kiri)
+local delayLabel = Instance.new("TextLabel", delayRow)
+delayLabel.AnchorPoint = Vector2.new(0,0.5)
+delayLabel.Position = UDim2.new(0,10,0.5,10)
+delayLabel.Size = UDim2.new(0.7, 0, 1, 0) 
 delayLabel.Text = "Finish Delay (sec):"
 delayLabel.TextColor3 = Color3.fromRGB(200,200,200)
 delayLabel.BackgroundTransparency = 1
 delayLabel.Font = Enum.Font.Gotham
 delayLabel.TextSize = 14
+delayLabel.TextXAlignment = Enum.TextXAlignment.Left
 
--- Input box buat atur delay
-local delayBox = Instance.new("TextBox", MiscTab)
-delayBox.Size = UDim2.new(0,50,0,20)
-delayBox.Position = UDim2.new(0,160,0,40)
-delayBox.BackgroundColor3 = Color3.fromRGB(40, 0, 80) -- warna dasar
-delayBox.BackgroundTransparency = 0.5 -- semi transparan (0 = solid, 1 = full transparan)
+-- Input box buat atur delay (kanan)
+local delayBox = Instance.new("TextBox", delayRow)
+delayBox.AnchorPoint = Vector2.new(1,0.5)
+delayBox.Position = UDim2.new(1, -20, 0.5, 10)
+delayBox.Size = UDim2.new(0, 60, 0.8, 0)
+delayBox.BackgroundColor3 = Color3.fromRGB(40, 0, 80)
+delayBox.BackgroundTransparency = 0.5 
 delayBox.TextColor3 = Color3.fromRGB(255,255,255)
 delayBox.Text = tostring(finishDelay)
 delayBox.ClearTextOnFocus = false
 delayBox.Font = Enum.Font.Code
 delayBox.TextSize = 14
-
--- Border biar jelas
 delayBox.BorderSizePixel = 1
 delayBox.BorderColor3 = Color3.fromRGB(255,255,255)
 
@@ -473,14 +497,29 @@ end)
 -- MINIMIZE & CLOSE
 -- =========================================================
 local minimized = false
+
 minimizeBtn.MouseButton1Click:Connect(function()
     minimized = not minimized
-    tabBar.Visible = not minimized
-    for _,f in pairs(contents) do f.Visible = false end
+
     if minimized then
-        mainFrame.Size = UDim2.new(0, 360, 0, 40)
+        tabBar.Visible = false
+        tabLineTop.Visible = false
+        tabLineBottom.Visible = false
+        
+        for _, f in pairs(contents) do
+            f.Visible = false
+        end
+
+        mainFrame.Size = UDim2.new(0, 200, 0, 40)
+        mainFrame.Position = UDim2.new(0.5, -100, 0, 10)
     else
+        tabBar.Visible = true
+        tabLineTop.Visible = true
+        tabLineBottom.Visible = true
+        
         mainFrame.Size = UDim2.new(0, 360, 0, 240)
+        mainFrame.Position = UDim2.new(0.5, -180, 0, 100)
+
         switchTab("AutoFish")
     end
 end)
