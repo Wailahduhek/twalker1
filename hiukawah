@@ -303,6 +303,17 @@ local teleportOcean = {
     {pos = Vector3.new(1825.4, 2.3, 3381.3), lookDir = Vector3.new(0.05, -0.00, -1.00)},
     {pos = Vector3.new(1857.4, 4.3, 3377.2), lookDir = Vector3.new(-0.59, -0.00, -0.80)},
 }
+local teleportSisyphus = {
+    {pos = Vector3.new(-3713.5, -135.1, -1013.1), lookDir = Vector3.new(-0.22, -0.00, 0.98)},
+    {pos = Vector3.new(-3740.1, -135.1, -1009.4), lookDir = Vector3.new(0.49, 0.00, 0.87)},
+    {pos = Vector3.new(-3757.4, -135.1, -1000.0), lookDir = Vector3.new(0.48, -0.00, 0.88)},
+    {pos = Vector3.new(-3674.4, -135.1, -995.5), lookDir = Vector3.new(-0.62, 0.00, 0.78)},
+    {pos = Vector3.new(-3657.1, -134.1, -959.3), lookDir = Vector3.new(-0.98, -0.00, 0.20)},
+    {pos = Vector3.new(-3691.2, -135.1, -892.4), lookDir = Vector3.new(-0.24, -0.00, -0.97)},
+    {pos = Vector3.new(-3705.0, -135.1, -885.3), lookDir = Vector3.new(-0.35, -0.00, -0.93)},
+}
+
+
 
 -- Tombol teleport manual
 createButton("Crater Island", 40, function()
@@ -325,7 +336,11 @@ end, tpTab)
 
 createButton("Sisyphus", 120, function()
     local plr = game.Players.LocalPlayer
-    plr.Character:SetPrimaryPartCFrame(CFrame.new(Vector3.new(-3794.81, -141.66 + 0.5, -1343.26)))
+    local spot = teleportSisyphus[math.random(1, #teleportSisyphus)]
+    plr.Character:SetPrimaryPartCFrame(CFrame.new(
+        spot.pos,
+        spot.pos + spot.lookDir
+    ))
 end, tpTab)
 
 createButton("Rod Shop 3M", 160, function()
@@ -333,10 +348,6 @@ createButton("Rod Shop 3M", 160, function()
     plr.Character:SetPrimaryPartCFrame(CFrame.new(Vector3.new(-3794.81, -141.66 + 0.5, -1343.26)))
 end, tpTab)
 
-createButton("Rod Shop 8M", 200, function()
-    local plr = game.Players.LocalPlayer
-    plr.Character:SetPrimaryPartCFrame(CFrame.new(Vector3.new(-3794.81, -141.66 + 0.5, -1343.26)))
-end, tpTab)
 
 -- Settings Tab
 local setTab = contents["Settings"]
