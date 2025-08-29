@@ -228,6 +228,7 @@ local function startFishing(statusLabel)
                     task.wait(0.1)
                     local reelTrack = playAnimation("rbxassetid://134965425664034")
                     miniGameRemote:InvokeServer(-1.238,0.969)
+                    local reelTrack = playAnimation("rbxassetid://134965425664034")
                     task.wait(0.3)
                     local baitConn = baitRemote.OnClientEvent:Connect(function() end)
                     local fishConn = fishRemote.OnClientEvent:Connect(function() end)
@@ -344,6 +345,12 @@ local teleportFisherman = {
     {pos = Vector3.new(-114.6, 3.3, 2929.4), lookDir = Vector3.new(-0.60, -0.00, -0.80)},
 }
 
+local teleportKohana = {
+    {pos = Vector3.new(-629.3, 30.0, 99.0), lookDir = Vector3.new(0, 0, -1)},
+    {pos = Vector3.new(-629.3, 30.0, 99.8), lookDir = Vector3.new(0, 0, -1)},
+    {pos = Vector3.new(-629.3, 30.0, 99.6), lookDir = Vector3.new(0, 0, -1)},
+    {pos = Vector3.new(-629.3, 30.0, 99.4), lookDir = Vector3.new(0, 0, -1)},
+}
 
 
 -- Tombol teleport manual
@@ -383,9 +390,13 @@ createButton("Fisherman Island", 160, function()
     ))
 end, tpTab)
 
-createButton("Rod Shop 8M", 200, function()
+createButton("Kohana Volcano", 200, function()
     local plr = game.Players.LocalPlayer
-    plr.Character:SetPrimaryPartCFrame(CFrame.new(Vector3.new(-3794.81, -141.66 + 0.5, -1343.26)))
+    local spot = teleportKohana[math.random(1, #teleportKohana)]
+    plr.Character:SetPrimaryPartCFrame(CFrame.new(
+        spot.pos,
+        spot.pos + spot.lookDir
+    ))
 end, tpTab)
 
 -- Settings Tab
@@ -498,7 +509,9 @@ createButton("Auto Weather", 120, function()
     end
 end, setTab)
 
--- Misc tab
+-- =========================================================
+-- MISC TAB
+-- =========================================================
 local MiscTab = contents["Misc"]
 
 -- Container buat baris "Finish Delay"
@@ -540,6 +553,125 @@ delayBox.FocusLost:Connect(function(enterPressed)
         finishDelay = val
     else
         delayBox.Text = tostring(finishDelay)
+    end
+end)
+-- =========================
+-- Rods Shop
+-- =========================
+local rods = {
+    ["Luck Rod"] = {id = 79, price = "350 Coins"},
+    ["Carbon Rod"] = {id = 76, price = "900 Coins"},
+    ["Grass Rod"] = {id = 85, price = "1.5k Coins"},
+    ["Demascus Rod"] = {id = 77, price = "3k Coins"},
+    ["Ice Rod"] = {id = 78, price = "5k Coins"},
+    ["Lucky Rod"] = {id = 4, price = "15k Coins"},
+    ["Midnight Rod"] = {id = 80, price = "50k Coins"},
+    ["Steampunk Rod"] = {id = 6, price = "215k Coins"},
+    ["Chrome Rod"] = {id = 7, price = "437k Coins"},
+    ["Astral Rod"] = {id = 5, price = "1M Coins"},
+    ["Ares Rod"] = {id = 126, price = "3M Coins"},
+    ["Angler Rod"] = {id = 168, price = "8M Coins"},
+}
+
+local selectedRod = "Steampunk Rod"
+
+-- Posisi Y baris rod
+local rodRowY = delayRow.Position.Y.Offset + delayRow.Size.Y.Offset + 10
+
+-- Frame untuk tombol Select Rod + Buy
+local rodRow = Instance.new("Frame", MiscTab)
+rodRow.Size = UDim2.new(1, -20, 0, 30)
+rodRow.Position = UDim2.new(0, 10, 0, rodRowY)
+rodRow.BackgroundTransparency = 1
+
+-- Tombol Select Rod
+local rodDropdown = Instance.new("TextButton", rodRow)
+rodDropdown.Size = UDim2.new(0,175,0,30)
+rodDropdown.Position = UDim2.new(0,0,0,0)
+rodDropdown.Text = "🎣 "..selectedRod.." ("..rods[selectedRod].price..")"
+rodDropdown.BackgroundColor3 = Color3.fromRGB(40,0,80)
+rodDropdown.TextColor3 = Color3.fromRGB(255,255,255)
+rodDropdown.Font = Enum.Font.GothamBold
+rodDropdown.TextSize = 14
+Instance.new("UICorner", rodDropdown).CornerRadius = UDim.new(0,6)
+
+-- Tombol Buy
+local buyBtn = Instance.new("TextButton", rodRow)
+buyBtn.Size = UDim2.new(0,150,0,30)
+buyBtn.Position = UDim2.new(0, rodDropdown.Size.X.Offset + 10, 0, 0)
+buyBtn.Text = "🛒 Buy Selected Rod"
+buyBtn.BackgroundColor3 = Color3.fromRGB(80,0,120)
+buyBtn.TextColor3 = Color3.fromRGB(255,255,255)
+buyBtn.Font = Enum.Font.GothamBold
+buyBtn.TextSize = 14
+Instance.new("UICorner", buyBtn).CornerRadius = UDim.new(0,6)
+buyBtn.Visible = false
+-- Popup dropdown mini (overlay)
+local popupDropdown = Instance.new("Frame", MiscTab)
+popupDropdown.Size = UDim2.new(0, 180, 0, 0) -- lebar fixed 180px, tinggi dinamis
+popupDropdown.Position = UDim2.new(0, rodDropdown.Position.X.Offset, 0, rodDropdown.Position.Y.Offset + rodDropdown.Size.Y.Offset + 5)
+popupDropdown.BackgroundColor3 = Color3.fromRGB(0,0,0)
+popupDropdown.BackgroundTransparency = 0.7 -- gelap transparan
+popupDropdown.Visible = false
+Instance.new("UICorner", popupDropdown).CornerRadius = UDim.new(0,6)
+
+-- Border hitam
+local border = Instance.new("UIStroke", popupDropdown)
+border.Thickness = 2
+border.Color = Color3.fromRGB(30,30,30)
+
+-- Layout tombol di tengah
+local layout = Instance.new("UIListLayout", popupDropdown)
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.Padding = UDim.new(0,2)
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+-- Rods yang ingin ditampilkan
+local displayedRods = {"Steampunk Rod","Astral Rod","Ares Rod","Angler Rod","Midnight Rod","Chrome Rod"}
+
+-- Tambahkan tombol ke popup
+for _, rodName in ipairs(displayedRods) do
+    local data = rods[rodName]
+    local btn = Instance.new("TextButton", popupDropdown)
+    btn.Size = UDim2.new(0.9,0,0,25) -- 90% lebar frame popup
+    btn.AnchorPoint = Vector2.new(0.5,0)
+    btn.Position = UDim2.new(0.5,0,0,0)
+    btn.Text = rodName.." ("..data.price..")"
+    btn.BackgroundColor3 = Color3.fromRGB(60,0,100)
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 13
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,4)
+
+    btn.MouseButton1Click:Connect(function()
+        selectedRod = rodName
+        rodDropdown.Text = "🎣 "..rodName.." ("..data.price..")"
+        popupDropdown.Visible = false
+        buyBtn.Visible = true
+    end)
+end
+
+-- Toggle popup mini
+rodDropdown.MouseButton1Click:Connect(function()
+    popupDropdown.Visible = not popupDropdown.Visible
+    buyBtn.Visible = false
+    if popupDropdown.Visible then
+        local count = #displayedRods
+        popupDropdown.Size = UDim2.new(0, 180, 0, count*27)
+    else
+        popupDropdown.Size = UDim2.new(0,180,0,0)
+    end
+end)
+
+
+-- Tombol Buy action
+buyBtn.MouseButton1Click:Connect(function()
+    local rodData = rods[selectedRod]
+    if rodData then
+        pcall(function()
+            local rodRemote = net:WaitForChild("RF/PurchaseFishingRod")
+            rodRemote:InvokeServer(rodData.id)
+        end)
     end
 end)
 
