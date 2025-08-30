@@ -8,7 +8,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
--- // Remotes (disesuaikan game)
+-- // Remotes
 local net = ReplicatedStorage:WaitForChild("Packages")
     :WaitForChild("_Index")
     :WaitForChild("sleitnick_net@0.2.0")
@@ -37,7 +37,6 @@ mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
 mainFrame.Draggable = true
 
--- border ungu gradasi
 local uiStroke = Instance.new("UIStroke", mainFrame)
 uiStroke.Thickness = 3
 uiStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
@@ -61,14 +60,13 @@ header.BackgroundTransparency = 1
 local title = Instance.new("TextLabel", header)
 title.Size = UDim2.new(1, -80, 1, 0)
 title.Position = UDim2.new(0, 10, 0, 0)
-title.Text = "Tole Walker 1.3"
+title.Text = "Tole Walker 1.4"
 title.TextColor3 = Color3.fromRGB(200, 200, 255)
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.BackgroundTransparency = 1
 title.Font = Enum.Font.GothamBold
 title.TextSize = 16
 
--- tombol minimize
 local minimizeBtn = Instance.new("TextButton", header)
 minimizeBtn.Size = UDim2.new(0, 24, 0, 24)
 minimizeBtn.Position = UDim2.new(1, -55, 0, 3)
@@ -77,7 +75,6 @@ minimizeBtn.TextScaled = true
 minimizeBtn.BackgroundColor3 = Color3.fromRGB(50, 0, 100)
 Instance.new("UICorner", minimizeBtn).CornerRadius = UDim.new(1, 0)
 
--- tombol close
 local closeBtn = Instance.new("TextButton", header)
 closeBtn.Size = UDim2.new(0, 24, 0, 24)
 closeBtn.Position = UDim2.new(1, -28, 0, 3)
@@ -107,7 +104,6 @@ local function createTab(name, emoji, order)
     btn.BackgroundColor3 = Color3.fromRGB(40,0,80)
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
 
-    -- 🔽 ganti ke ScrollingFrame
     local frame = Instance.new("ScrollingFrame", mainFrame)
     frame.Size = UDim2.new(1, -20, 1, -80)
     frame.Position = UDim2.new(0, 10, 0, 70)
@@ -118,7 +114,6 @@ local function createTab(name, emoji, order)
     frame.AutomaticCanvasSize = Enum.AutomaticSize.Y
     frame.CanvasSize = UDim2.new(0,0,0,0)
 
-    -- 🔽 biar isinya otomatis ke bawah
     local layout = Instance.new("UIListLayout", frame)
     layout.Padding = UDim.new(0, 5)
     layout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -188,7 +183,7 @@ local function playAnimation(animId)
     return track
 end
 
-local catchCount = 0 -- counter tangkapan
+local catchCount = 0
 
 local function sellAllFish(statusLabel)
     local net = game:GetService("ReplicatedStorage"):WaitForChild("Packages")
@@ -204,59 +199,83 @@ local function sellAllFish(statusLabel)
         sellRemote:InvokeServer()
     end)
 
-    task.wait(1) -- kasih delay biar keliatan
+    task.wait(1) 
     statusLabel.Text = "Status: ✔ Running"
     statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
 end
 
-local finishDelay = 1 
+local autofish = false
+local stopRequested = false
+local catchCount = 0
 
-local function startFishing(statusLabel)
-    if autofish then return end
-    autofish = true
-    statusLabel.Text = "Status: ✔ Running"
-    statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
+function startFishing(statusLabel)
+	if autofish then return end
+	autofish = true
+	stopRequested = false
+	statusLabel.Text = "Status: ✔ Running"
+	statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
 
-    task.spawn(function()
-        pcall(function()
-            equipRemote:FireServer(1) 
-            task.wait(1)
-            while autofish do
-                pcall(function()
-                    local timestamp = perfectCast and 9999999999 or (tick() + math.random())
-                    rodRemote:InvokeServer(timestamp)
-                    task.wait(0.1)
-                    local reelTrack = playAnimation("rbxassetid://134965425664034")
-                    miniGameRemote:InvokeServer(-1.238,0.969)
-                    local reelTrack = playAnimation("rbxassetid://134965425664034")
-                    task.wait(0.3)
-                    local baitConn = baitRemote.OnClientEvent:Connect(function() end)
-                    local fishConn = fishRemote.OnClientEvent:Connect(function() end)
-                    task.wait(finishDelay)
-                    reelTrack:Stop()
-                    finishRemote:FireServer()
-                    baitConn:Disconnect()
-                    fishConn:Disconnect()
-                    catchCount += 1
-                    statusLabel.Text = "Status: Catch " .. catchCount
-                    statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
-                    if catchCount >= 1000 then
-                        sellAllFish(statusLabel)
-                        catchCount = 0
-                    end
-                end)
-                task.wait(0.5)
-            end
-        end)
-    end)
+	task.spawn(function()
+		equipRemote:FireServer(1)
+		task.wait(1)
+
+		while autofish do
+			local success, err = pcall(function()
+				local timestamp = perfectCast and 9999999999 or (tick() + math.random())
+				rodRemote:InvokeServer(timestamp)
+				task.wait(0.1)
+
+				local reelTrack = playAnimation("rbxassetid://134965425664034")
+				miniGameRemote:InvokeServer(-1.238, 0.969)
+				task.wait(0.3)
+
+				local fishCaught = false
+				local baitConn = baitRemote.OnClientEvent:Connect(function() end)
+				local fishConn = fishRemote.OnClientEvent:Connect(function()
+					fishCaught = true
+				end)
+
+				while autofish and not fishCaught do
+					finishRemote:FireServer()
+					task.wait(0.2)
+				end
+
+				if reelTrack then reelTrack:Stop() end
+				baitConn:Disconnect()
+				fishConn:Disconnect()
+
+				if fishCaught then
+					catchCount += 1
+					statusLabel.Text = "Status: Catch " .. catchCount
+					statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
+				end
+
+				if catchCount >= 1000 then
+					sellAllFish(statusLabel)
+					catchCount = 0
+				end
+
+				if stopRequested and fishCaught then
+					autofish = false
+				end
+			end)
+
+			if not success then
+				print("Fishing error:", err)
+			end
+
+			task.wait(0.5)
+		end
+
+		statusLabel.Text = "Status: X Stopped"
+		statusLabel.TextColor3 = Color3.fromRGB(255, 140, 140)
+	end)
 end
 
-
-local function stopFishing(statusLabel)
-    autofish = false
-    statusLabel.Text = "Status: X Not Running"
-    statusLabel.TextColor3 = Color3.fromRGB(255, 120, 120)
+function stopFishing()
+	stopRequested = true
 end
+
 -- =========================================================
 -- AUTO FISH TAB UI
 -- =========================================================
@@ -295,7 +314,6 @@ end, autoTab)
 -- =========================================================
 -- OTHER TABS
 -- =========================================================
--- Teleport
 local tpTab = contents["Teleport"]
 local tpLabel = Instance.new("TextLabel", tpTab)
 tpLabel.Size = UDim2.new(1,0,0,25)
@@ -353,7 +371,6 @@ local teleportKohana = {
 }
 
 
--- Tombol teleport manual
 createButton("Crater Island", 40, function()
     local plr = game.Players.LocalPlayer
     local spot = teleportSpots[math.random(1, #teleportSpots)]
@@ -399,10 +416,8 @@ createButton("Kohana Volcano", 200, function()
     ))
 end, tpTab)
 
--- Settings Tab
 local setTab = contents["Settings"]
 
--- Function buat bikin tombol
 local function createButton(text, posY, callback, parent)
     local btn = Instance.new("TextButton", parent)
     btn.Size = UDim2.new(1, 0, 0, 30)
@@ -417,7 +432,6 @@ local function createButton(text, posY, callback, parent)
     return btn
 end
 
--- 🔹 Label status Auto Weather (paling atas Y = 10)
 local autoWeather = false
 local autoWeatherLabel = Instance.new("TextLabel", setTab)
 autoWeatherLabel.Size = UDim2.new(1, 0, 0, 25)
@@ -428,7 +442,6 @@ autoWeatherLabel.BackgroundTransparency = 1
 autoWeatherLabel.Font = Enum.Font.Gotham
 autoWeatherLabel.TextSize = 14
 
--- 🔹 Helper function update label
 local function updateAutoWeatherLabel(tempText, duration)
     if tempText then
         autoWeatherLabel.Text = tempText
@@ -442,14 +455,12 @@ local function updateAutoWeatherLabel(tempText, duration)
     end
 end
 
--- Button 1: Rejoin Server (mulai dari Y = 40)
 createButton("Rejoin Server", 40, function()
     local ts = game:GetService("TeleportService")
     local lp = game:GetService("Players").LocalPlayer
     ts:Teleport(game.PlaceId, lp)
 end, setTab)
 
--- Button 2: Sell All Fish (Y = 80)
 createButton("Sell All Fish", 80, function()
     local net = game:GetService("ReplicatedStorage"):WaitForChild("Packages")
         :WaitForChild("_Index"):WaitForChild("sleitnick_net@0.2.0"):WaitForChild("net")
@@ -460,7 +471,6 @@ createButton("Sell All Fish", 80, function()
     end)
 end, setTab)
 
--- Button 3: Auto Weather (Y = 120)
 createButton("Auto Weather", 120, function()
     autoWeather = not autoWeather
     updateAutoWeatherLabel()
@@ -514,47 +524,6 @@ end, setTab)
 -- =========================================================
 local MiscTab = contents["Misc"]
 
--- Container buat baris "Finish Delay"
-local delayRow = Instance.new("Frame", MiscTab)
-delayRow.Size = UDim2.new(1, 0, 0, 25)
-delayRow.BackgroundTransparency = 1
-
--- Label pengaturan delay (kiri)
-local delayLabel = Instance.new("TextLabel", delayRow)
-delayLabel.AnchorPoint = Vector2.new(0,0.5)
-delayLabel.Position = UDim2.new(0,10,0.5,10)
-delayLabel.Size = UDim2.new(0.7, 0, 1, 0) 
-delayLabel.Text = "Finish Delay (sec):"
-delayLabel.TextColor3 = Color3.fromRGB(200,200,200)
-delayLabel.BackgroundTransparency = 1
-delayLabel.Font = Enum.Font.Gotham
-delayLabel.TextSize = 14
-delayLabel.TextXAlignment = Enum.TextXAlignment.Left
-
--- Input box buat atur delay (kanan)
-local delayBox = Instance.new("TextBox", delayRow)
-delayBox.AnchorPoint = Vector2.new(1,0.5)
-delayBox.Position = UDim2.new(1, -20, 0.5, 10)
-delayBox.Size = UDim2.new(0, 60, 0.8, 0)
-delayBox.BackgroundColor3 = Color3.fromRGB(40, 0, 80)
-delayBox.BackgroundTransparency = 0.5 
-delayBox.TextColor3 = Color3.fromRGB(255,255,255)
-delayBox.Text = tostring(finishDelay)
-delayBox.ClearTextOnFocus = false
-delayBox.Font = Enum.Font.Code
-delayBox.TextSize = 14
-delayBox.BorderSizePixel = 1
-delayBox.BorderColor3 = Color3.fromRGB(255,255,255)
-
--- Update nilai finishDelay kalau user ubah
-delayBox.FocusLost:Connect(function(enterPressed)
-    local val = tonumber(delayBox.Text)
-    if val and val > 0 then
-        finishDelay = val
-    else
-        delayBox.Text = tostring(finishDelay)
-    end
-end)
 -- =========================
 -- Rods Shop
 -- =========================
@@ -575,65 +544,53 @@ local rods = {
 
 local selectedRod = "Steampunk Rod"
 
--- Posisi Y baris rod
-local rodRowY = delayRow.Position.Y.Offset + delayRow.Size.Y.Offset + 10
-
--- Frame untuk tombol Select Rod + Buy
 local rodRow = Instance.new("Frame", MiscTab)
 rodRow.Size = UDim2.new(1, -20, 0, 30)
-rodRow.Position = UDim2.new(0, 10, 0, rodRowY)
+rodRow.Position = UDim2.new(0, 10, 0, 10)
 rodRow.BackgroundTransparency = 1
 
--- Tombol Select Rod
 local rodDropdown = Instance.new("TextButton", rodRow)
 rodDropdown.Size = UDim2.new(0,175,0,30)
 rodDropdown.Position = UDim2.new(0,0,0,0)
-rodDropdown.Text = "🎣 "..selectedRod.." ("..rods[selectedRod].price..")"
+rodDropdown.Text = selectedRod.." ("..rods[selectedRod].price..")"
 rodDropdown.BackgroundColor3 = Color3.fromRGB(40,0,80)
 rodDropdown.TextColor3 = Color3.fromRGB(255,255,255)
 rodDropdown.Font = Enum.Font.GothamBold
 rodDropdown.TextSize = 14
 Instance.new("UICorner", rodDropdown).CornerRadius = UDim.new(0,6)
 
--- Tombol Buy
-local buyBtn = Instance.new("TextButton", rodRow)
-buyBtn.Size = UDim2.new(0,150,0,30)
-buyBtn.Position = UDim2.new(0, rodDropdown.Size.X.Offset + 10, 0, 0)
-buyBtn.Text = "🛒 Buy Selected Rod"
-buyBtn.BackgroundColor3 = Color3.fromRGB(80,0,120)
-buyBtn.TextColor3 = Color3.fromRGB(255,255,255)
-buyBtn.Font = Enum.Font.GothamBold
-buyBtn.TextSize = 14
-Instance.new("UICorner", buyBtn).CornerRadius = UDim.new(0,6)
-buyBtn.Visible = false
--- Popup dropdown mini (overlay)
-local popupDropdown = Instance.new("Frame", MiscTab)
-popupDropdown.Size = UDim2.new(0, 180, 0, 0) -- lebar fixed 180px, tinggi dinamis
-popupDropdown.Position = UDim2.new(0, rodDropdown.Position.X.Offset, 0, rodDropdown.Position.Y.Offset + rodDropdown.Size.Y.Offset + 5)
-popupDropdown.BackgroundColor3 = Color3.fromRGB(0,0,0)
-popupDropdown.BackgroundTransparency = 0.7 -- gelap transparan
-popupDropdown.Visible = false
-Instance.new("UICorner", popupDropdown).CornerRadius = UDim.new(0,6)
+local buyRodBtn = Instance.new("TextButton", rodRow)
+buyRodBtn.Size = UDim2.new(0,150,0,30)
+buyRodBtn.Position = UDim2.new(0, rodDropdown.Size.X.Offset + 10, 0, 0)
+buyRodBtn.Text = "🛒 Buy Selected Rod"
+buyRodBtn.BackgroundColor3 = Color3.fromRGB(80,0,120)
+buyRodBtn.TextColor3 = Color3.fromRGB(255,255,255)
+buyRodBtn.Font = Enum.Font.GothamBold
+buyRodBtn.TextSize = 14
+Instance.new("UICorner", buyRodBtn).CornerRadius = UDim.new(0,6)
+buyRodBtn.Visible = false
 
--- Border hitam
-local border = Instance.new("UIStroke", popupDropdown)
-border.Thickness = 2
-border.Color = Color3.fromRGB(30,30,30)
+local rodPopup = Instance.new("ScrollingFrame", MiscTab)
+rodPopup.Size = UDim2.new(0, 180, 0, 150)
+rodPopup.Position = UDim2.new(0, rodDropdown.Position.X.Offset, 0, rodRow.Position.Y.Offset + rodRow.Size.Y.Offset + 5)
+rodPopup.BackgroundColor3 = Color3.fromRGB(0,0,0)
+rodPopup.BackgroundTransparency = 0.7
+rodPopup.Visible = false
+rodPopup.CanvasSize = UDim2.new(0,0,0,0)
+rodPopup.ScrollBarThickness = 6
+Instance.new("UICorner", rodPopup).CornerRadius = UDim.new(0,6)
 
--- Layout tombol di tengah
-local layout = Instance.new("UIListLayout", popupDropdown)
-layout.SortOrder = Enum.SortOrder.LayoutOrder
-layout.Padding = UDim.new(0,2)
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+local rodLayout = Instance.new("UIListLayout", rodPopup)
+rodLayout.SortOrder = Enum.SortOrder.LayoutOrder
+rodLayout.Padding = UDim.new(0,2)
+rodLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
--- Rods yang ingin ditampilkan
-local displayedRods = {"Steampunk Rod","Astral Rod","Ares Rod","Angler Rod","Midnight Rod","Chrome Rod"}
+local displayedRods = {"Angler Rod","Astral Rod","Ares Rod","Steampunk Rod","Midnight Rod","Chrome Rod"}
 
--- Tambahkan tombol ke popup
 for _, rodName in ipairs(displayedRods) do
     local data = rods[rodName]
-    local btn = Instance.new("TextButton", popupDropdown)
-    btn.Size = UDim2.new(0.9,0,0,25) -- 90% lebar frame popup
+    local btn = Instance.new("TextButton", rodPopup)
+    btn.Size = UDim2.new(0.9,0,0,25)
     btn.AnchorPoint = Vector2.new(0.5,0)
     btn.Position = UDim2.new(0.5,0,0,0)
     btn.Text = rodName.." ("..data.price..")"
@@ -645,32 +602,142 @@ for _, rodName in ipairs(displayedRods) do
 
     btn.MouseButton1Click:Connect(function()
         selectedRod = rodName
-        rodDropdown.Text = "🎣 "..rodName.." ("..data.price..")"
-        popupDropdown.Visible = false
-        buyBtn.Visible = true
+        rodDropdown.Text = rodName.." ("..data.price..")"
+        rodPopup.Visible = false
+        buyRodBtn.Visible = true
     end)
 end
 
--- Toggle popup mini
 rodDropdown.MouseButton1Click:Connect(function()
-    popupDropdown.Visible = not popupDropdown.Visible
-    buyBtn.Visible = false
-    if popupDropdown.Visible then
+    rodPopup.Visible = not rodPopup.Visible
+    buyRodBtn.Visible = false
+    if rodPopup.Visible then
         local count = #displayedRods
-        popupDropdown.Size = UDim2.new(0, 180, 0, count*27)
-    else
-        popupDropdown.Size = UDim2.new(0,180,0,0)
+        rodPopup.CanvasSize = UDim2.new(0,0,0,count*27)
     end
 end)
 
-
--- Tombol Buy action
-buyBtn.MouseButton1Click:Connect(function()
+buyRodBtn.MouseButton1Click:Connect(function()
     local rodData = rods[selectedRod]
     if rodData then
         pcall(function()
             local rodRemote = net:WaitForChild("RF/PurchaseFishingRod")
             rodRemote:InvokeServer(rodData.id)
+        end)
+    end
+end)
+
+-- =========================
+-- Bait Shop
+-- =========================
+local baits = {
+    ["TopWater Bait"] = 10,
+    ["Lucky Bait"] = 2,
+    ["Midnight Bait"] = 3,
+    ["Chroma Bait"] = 6,
+    ["Dark Mater Bait"] = 8,
+    ["Corrupt Bait"] = 15,
+    ["Aether Bait"] = 16
+}
+
+local baitNames = {
+    "TopWater Bait (100 Coins)",
+    "Lucky Bait (1k Coins)",
+    "Midnight Bait (3k Coins)",
+    "Chroma Bait (290k Coins)",
+    "Dark Mater Bait (630k Coins)",
+    "Corrupt Bait (1.15M Coins)",
+    "Aether Bait (3.7M Coins)"
+}
+
+local baitKeyMap = {
+    ["TopWater Bait (100 Coins)"] = "TopWater Bait",
+    ["Lucky Bait (1k Coins)"] = "Lucky Bait",
+    ["Midnight Bait (3k Coins)"] = "Midnight Bait",
+    ["Chroma Bait (290k Coins)"] = "Chroma Bait",
+    ["Dark Mater Bait (630k Coins)"] = "Dark Mater Bait",
+    ["Corrupt Bait (1.15M Coins)"] = "Corrupt Bait",
+    ["Aether Bait (3.7M Coins)"] = "Aether Bait"
+}
+
+local selectedBait = baitNames[1]
+
+local baitFrame = Instance.new("Frame", MiscTab)
+baitFrame.Size = UDim2.new(1, -20, 0, 60)
+baitFrame.Position = UDim2.new(0,10,0,rodRow.Position.Y.Offset + rodRow.Size.Y.Offset + 20)
+baitFrame.BackgroundTransparency = 1
+
+local baitDropdown = Instance.new("TextButton", baitFrame)
+baitDropdown.Size = UDim2.new(0,175,0,30)
+baitDropdown.Position = UDim2.new(0,0,0,0)
+baitDropdown.Text = selectedBait
+baitDropdown.BackgroundColor3 = Color3.fromRGB(40,0,80)
+baitDropdown.TextColor3 = Color3.fromRGB(255,255,255)
+baitDropdown.Font = Enum.Font.GothamBold
+baitDropdown.TextSize = 14
+Instance.new("UICorner", baitDropdown).CornerRadius = UDim.new(0,6)
+
+local buyBaitBtn = Instance.new("TextButton", baitFrame)
+buyBaitBtn.Size = UDim2.new(0,150,0,30)
+buyBaitBtn.Position = UDim2.new(0, baitDropdown.Size.X.Offset + 10, 0, 0)
+buyBaitBtn.Text = "🛒 Buy Selected Bait"
+buyBaitBtn.BackgroundColor3 = Color3.fromRGB(80,0,120)
+buyBaitBtn.TextColor3 = Color3.fromRGB(255,255,255)
+buyBaitBtn.Font = Enum.Font.GothamBold
+buyBaitBtn.TextSize = 14
+Instance.new("UICorner", buyBaitBtn).CornerRadius = UDim.new(0,6)
+buyBaitBtn.Visible = false
+
+local baitPopup = Instance.new("ScrollingFrame", baitFrame)
+baitPopup.Size = UDim2.new(0, 180, 0, 100)
+baitPopup.Position = UDim2.new(0, baitDropdown.Position.X.Offset, 0, baitDropdown.Position.Y.Offset + baitDropdown.Size.Y.Offset + 5)
+baitPopup.BackgroundColor3 = Color3.fromRGB(0,0,0)
+baitPopup.BackgroundTransparency = 0.7
+baitPopup.Visible = false
+baitPopup.CanvasSize = UDim2.new(0,0,0,0)
+baitPopup.ScrollBarThickness = 6
+Instance.new("UICorner", baitPopup).CornerRadius = UDim.new(0,6)
+
+local baitLayout = Instance.new("UIListLayout", baitPopup)
+baitLayout.SortOrder = Enum.SortOrder.LayoutOrder
+baitLayout.Padding = UDim.new(0,2)
+baitLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+for _, baitName in ipairs(baitNames) do
+    local btn = Instance.new("TextButton", baitPopup)
+    btn.Size = UDim2.new(0.9,0,0,25)
+    btn.AnchorPoint = Vector2.new(0.5,0)
+    btn.Position = UDim2.new(0.5,0,0,0)
+    btn.Text = baitName
+    btn.BackgroundColor3 = Color3.fromRGB(60,0,100)
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 13
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,4)
+
+    btn.MouseButton1Click:Connect(function()
+        selectedBait = baitName
+        baitDropdown.Text = baitName
+        baitPopup.Visible = false
+        buyBaitBtn.Visible = true
+    end)
+end
+
+baitDropdown.MouseButton1Click:Connect(function()
+    baitPopup.Visible = not baitPopup.Visible
+    buyBaitBtn.Visible = false
+    if baitPopup.Visible then
+        baitPopup.CanvasSize = UDim2.new(0,0,0,#baitNames*27)
+    end
+end)
+local RFPurchaseBait = net:WaitForChild("RF/PurchaseBait")
+
+buyBaitBtn.MouseButton1Click:Connect(function()
+    local key = baitKeyMap[selectedBait]
+    if key and baits[key] then
+        local amount = baits[key]
+        pcall(function()
+            RFPurchaseBait:InvokeServer(amount)
         end)
     end
 end)
