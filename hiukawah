@@ -183,7 +183,7 @@ local function playAnimation(animId)
     return track
 end
 
-local catchCount = 0
+local catchCount = 0 
 
 local function sellAllFish(statusLabel)
     local net = game:GetService("ReplicatedStorage"):WaitForChild("Packages")
@@ -199,94 +199,58 @@ local function sellAllFish(statusLabel)
         sellRemote:InvokeServer()
     end)
 
-    task.wait(1) 
+    task.wait(1)
     statusLabel.Text = "Status: ✔ Running"
     statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
 end
 
-local autofish = false
-local stopRequested = false
-local catchCount = 0
+local finishDelay = 1 
 
-function startFishing(statusLabel)
-	if autofish then return end
-	autofish = true
-	stopRequested = false
-	statusLabel.Text = "Status: ✔ Running"
-	statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
+local function startFishing(statusLabel)
+    if autofish then return end
+    autofish = true
+    statusLabel.Text = "Status: ✔ Running"
+    statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
 
-	task.spawn(function()
-		equipRemote:FireServer(1)
-		task.wait(1)
-
-		while autofish do
-			local success, err = pcall(function()
-				local timestamp = perfectCast and 9999999999 or (tick() + math.random())
-				rodRemote:InvokeServer(timestamp)
-				task.wait(0.1)
-
-				local reelTrack = playAnimation("rbxassetid://134965425664034")
-				miniGameRemote:InvokeServer(-1.238, 0.969)
-				task.wait(0.3)
-
-				local fishCaught = false
-				local baitConn = baitRemote.OnClientEvent:Connect(function() end)
-				local fishConn = fishRemote.OnClientEvent:Connect(function()
-					fishCaught = true
-				end)
-
-				while autofish and not fishCaught do
-					finishRemote:FireServer()
-					task.wait(0.2)
-				end
-
-				if reelTrack then reelTrack:Stop() end
-				baitConn:Disconnect()
-				fishConn:Disconnect()
-
-				if fishCaught then
-					catchCount += 1
-					statusLabel.Text = "Status: Catch " .. catchCount
-					statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
-				end
-
-				if catchCount >= 1000 then
-					sellAllFish(statusLabel)
-					catchCount = 0
-				end
-
-				if stopRequested then
-					autofish = false
-				end
-			end)
-
-			if not success then
-				print("Fishing error:", err)
-			end
-
-			task.wait(0.5)
-		end
-
-		statusLabel.Text = "Status: ✖ Stopped"
-		statusLabel.TextColor3 = Color3.fromRGB(255, 140, 140)
-	end)
+    task.spawn(function()
+        pcall(function()
+            equipRemote:FireServer(1) 
+            task.wait(1)
+            while autofish do
+                pcall(function()
+                    local timestamp = perfectCast and 9999999999 or (tick() + math.random())
+                    rodRemote:InvokeServer(timestamp)
+                    task.wait(0.1)
+                    local reelTrack = playAnimation("rbxassetid://134965425664034")
+                    miniGameRemote:InvokeServer(-1.238,0.969)
+                    local reelTrack = playAnimation("rbxassetid://134965425664034")
+                    task.wait(0.3)
+                    local baitConn = baitRemote.OnClientEvent:Connect(function() end)
+                    local fishConn = fishRemote.OnClientEvent:Connect(function() end)
+                    task.wait(finishDelay)
+                    reelTrack:Stop()
+                    finishRemote:FireServer()
+                    baitConn:Disconnect()
+                    fishConn:Disconnect()
+                    catchCount += 1
+                    statusLabel.Text = "Status: Catch " .. catchCount
+                    statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
+                    if catchCount >= 1000 then
+                        sellAllFish(statusLabel)
+                        catchCount = 0
+                    end
+                end)
+                task.wait(0.5)
+            end
+        end)
+    end)
 end
 
-function stopFishing(statusLabel)
-	if stopRequested or not autofish then return end
-	stopRequested = true
 
-	task.spawn(function()
-		for i = 5, 1, -1 do
-			if statusLabel then
-				statusLabel.Text = "Status: ⏳ Stopping in " .. i .. "s"
-				statusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
-			end
-			task.wait(1)
-		end
-		statusLabel.Text = "Status: ✖ Stopped"
-		statusLabel.TextColor3 = Color3.fromRGB(255, 140, 140)
-	end)
+local function stopFishing(statusLabel)
+    autofish = false
+    statusLabel.Text = "Status: X Not Running"
+    statusLabel.TextColor3 = Color3.fromRGB(255, 120, 120)
 end
 -- =========================================================
 -- AUTO FISH TAB UI
@@ -326,6 +290,7 @@ end, autoTab)
 -- =========================================================
 -- OTHER TABS
 -- =========================================================
+-- Teleport
 local tpTab = contents["Teleport"]
 local tpLabel = Instance.new("TextLabel", tpTab)
 tpLabel.Size = UDim2.new(1,0,0,25)
@@ -335,6 +300,14 @@ tpLabel.TextColor3 = Color3.fromRGB(200,200,255)
 tpLabel.BackgroundTransparency = 1
 tpLabel.Font = Enum.Font.Gotham
 tpLabel.TextSize = 14
+
+teleportCoral = {
+    {pos = Vector3.new(-2947.46, 2.75, 2110.76), lookDir = Vector3.new(0.16, -0.00, -0.99)},
+    {pos = Vector3.new(-2937.30, 2.75, 2111.35), lookDir = Vector3.new(0.00, 0.00, -1.00)},
+    {pos = Vector3.new(-2974.28, 2.87, 2090.02), lookDir = Vector3.new(0.99, -0.00, -0.17)},
+    {pos = Vector3.new(-2969.94, 4.00, 2043.68), lookDir = Vector3.new(0.74, 0.00, 0.67)},
+    {pos = Vector3.new(-2928.52, 6.00, 2053.06), lookDir = Vector3.new(-0.52, -0.00, 0.85)},
+}
 
 local teleportSpots = {
     {pos = Vector3.new(987.6, 1.7, 5141.6), lookDir = Vector3.new(0, 0, -1)}, 
@@ -383,9 +356,10 @@ local teleportKohana = {
 }
 
 
-createButton("Crater Island", 40, function()
+
+createButton("Coral Reefs", 40, function()
     local plr = game.Players.LocalPlayer
-    local spot = teleportSpots[math.random(1, #teleportSpots)]
+    local spot = teleportCoral[math.random(1, #teleportCoral)]
     plr.Character:SetPrimaryPartCFrame(CFrame.new(
         spot.pos,
         spot.pos + spot.lookDir
@@ -401,7 +375,16 @@ createButton("Ocean", 80, function()
     ))
 end, tpTab)
 
-createButton("Sisyphus", 120, function()
+createButton("Kohana Volcano", 120, function()
+    local plr = game.Players.LocalPlayer
+    local spot = teleportKohana[math.random(1, #teleportKohana)]
+    plr.Character:SetPrimaryPartCFrame(CFrame.new(
+        spot.pos,
+        spot.pos + spot.lookDir
+    ))
+end, tpTab)
+
+createButton("Sisyphus", 200, function()
     local plr = game.Players.LocalPlayer
     local spot = teleportSisyphus[math.random(1, #teleportSisyphus)]
     plr.Character:SetPrimaryPartCFrame(CFrame.new(
@@ -419,15 +402,16 @@ createButton("Fisherman Island", 160, function()
     ))
 end, tpTab)
 
-createButton("Kohana Volcano", 200, function()
+createButton("Crater Island", 240, function()
     local plr = game.Players.LocalPlayer
-    local spot = teleportKohana[math.random(1, #teleportKohana)]
+    local spot = teleportSpots[math.random(1, #teleportSpots)]
     plr.Character:SetPrimaryPartCFrame(CFrame.new(
         spot.pos,
         spot.pos + spot.lookDir
     ))
 end, tpTab)
 
+-- Settings Tab
 local setTab = contents["Settings"]
 
 local function createButton(text, posY, callback, parent)
@@ -530,6 +514,7 @@ createButton("Auto Weather", 120, function()
         end)
     end
 end, setTab)
+
 
 -- =========================================================
 -- MISC TAB
@@ -751,6 +736,49 @@ buyBaitBtn.MouseButton1Click:Connect(function()
         pcall(function()
             RFPurchaseBait:InvokeServer(amount)
         end)
+    end
+end)
+
+-- =========================
+-- Finish Delay Control
+-- =========================
+
+local delayRow = Instance.new("Frame", MiscTab)
+delayRow.Size = UDim2.new(1, -20, 0, 30)
+delayRow.Position = UDim2.new(0,10,0,baitFrame.Position.Y.Offset + baitFrame.Size.Y.Offset + 20)
+delayRow.BackgroundTransparency = 1
+
+local delayLabel = Instance.new("TextLabel", delayRow)
+delayLabel.AnchorPoint = Vector2.new(0,0.5)
+delayLabel.Position = UDim2.new(0,10,0.5,0)
+delayLabel.Size = UDim2.new(0.7, 0, 1, 0) 
+delayLabel.Text = "Finish Delay (sec):"
+delayLabel.TextColor3 = Color3.fromRGB(200,200,200)
+delayLabel.BackgroundTransparency = 1
+delayLabel.Font = Enum.Font.Gotham
+delayLabel.TextSize = 14
+delayLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local delayBox = Instance.new("TextBox", delayRow)
+delayBox.AnchorPoint = Vector2.new(1,0.5)
+delayBox.Position = UDim2.new(1, -20, 0.5, 0)
+delayBox.Size = UDim2.new(0, 60, 0.8, 0)
+delayBox.BackgroundColor3 = Color3.fromRGB(40, 0, 80)
+delayBox.BackgroundTransparency = 0.5 
+delayBox.TextColor3 = Color3.fromRGB(255,255,255)
+delayBox.Text = tostring(finishDelay)
+delayBox.ClearTextOnFocus = false
+delayBox.Font = Enum.Font.Code
+delayBox.TextSize = 14
+delayBox.BorderSizePixel = 1
+delayBox.BorderColor3 = Color3.fromRGB(255,255,255)
+
+delayBox.FocusLost:Connect(function(enterPressed)
+    local val = tonumber(delayBox.Text)
+    if val and val > 0 then
+        finishDelay = val
+    else
+        delayBox.Text = tostring(finishDelay)
     end
 end)
 
