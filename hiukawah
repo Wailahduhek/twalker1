@@ -1,7 +1,4 @@
--- // Vars
-local autofish = false
-local perfectCast = true
-local catchCount = 0
+
 
 -- // Services
 local Players = game:GetService("Players")
@@ -60,7 +57,7 @@ header.BackgroundTransparency = 1
 local title = Instance.new("TextLabel", header)
 title.Size = UDim2.new(1, -80, 1, 0)
 title.Position = UDim2.new(0, 10, 0, 0)
-title.Text = "Tole Walker 1.4"
+title.Text = "Tole Walker 1.5"
 title.TextColor3 = Color3.fromRGB(200, 200, 255)
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.BackgroundTransparency = 1
@@ -167,7 +164,13 @@ tabBar:GetPropertyChangedSignal("Position"):Connect(updateLines)
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
+local RodIdle = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Animations"):WaitForChild("FishingRodReelIdle")
+local RodReel = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Animations"):WaitForChild("EasyFishReelStart")
+local RodShake = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Animations"):WaitForChild("CastFromFullChargePosition1Hand")
 local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
+local RodShake = animator:LoadAnimation(RodShake)
+local RodIdle = animator:LoadAnimation(RodIdle)
+local RodReel = animator:LoadAnimation(RodReel)
 
 local function stopAll()
     for _, t in pairs(animator:GetPlayingAnimationTracks()) do
@@ -182,8 +185,6 @@ local function playAnimation(animId)
     track:Play()
     return track
 end
-
-local catchCount = 0 
 
 local function sellAllFish(statusLabel)
     local net = game:GetService("ReplicatedStorage"):WaitForChild("Packages")
@@ -204,7 +205,25 @@ local function sellAllFish(statusLabel)
     statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
 end
 
-local finishDelay = 1 
+
+local perfectCast = true
+local Replion = require(ReplicatedStorage.Packages.Replion)
+
+local clientData = Replion.Client:WaitReplion("Data")
+
+local function getCoins()
+    local data = clientData:Get()
+    return data.Coins or 0
+end
+
+local function getFishCaught()
+    local data = clientData:Get()
+    return (data.Statistics and data.Statistics.FishCaught) or 0
+end
+
+local autofish = false
+local catchCount = 0
+local finishDelay = 1
 
 local function startFishing(statusLabel)
     if autofish then return end
@@ -212,29 +231,55 @@ local function startFishing(statusLabel)
     statusLabel.Text = "Status: ✔ Running"
     statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
 
+    local lastFish = getFishCaught()
+
     task.spawn(function()
         pcall(function()
-            equipRemote:FireServer(1) 
+            equipRemote:FireServer(1)
             task.wait(1)
+
             while autofish do
                 pcall(function()
                     local timestamp = perfectCast and 9999999999 or (tick() + math.random())
+                    local reelTrack = playAnimation("rbxassetid://134965425664034")
+                    RodShake:Play()
+                    reelTrack:Play()
                     rodRemote:InvokeServer(timestamp)
                     task.wait(0.1)
-                    local reelTrack = playAnimation("rbxassetid://134965425664034")
+                    reelTrack:Play()
                     miniGameRemote:InvokeServer(-1.238,0.969)
-                    local reelTrack = playAnimation("rbxassetid://134965425664034")
                     task.wait(0.3)
+
                     local baitConn = baitRemote.OnClientEvent:Connect(function() end)
                     local fishConn = fishRemote.OnClientEvent:Connect(function() end)
                     task.wait(finishDelay)
-                    reelTrack:Stop()
+
                     finishRemote:FireServer()
                     baitConn:Disconnect()
                     fishConn:Disconnect()
+
+                    local currentFish = getFishCaught()
+                    local attempts = 0
+                    local maxAttempts = 20
+                    while currentFish <= lastFish and attempts < maxAttempts do
+                        finishRemote:FireServer()
+                        task.wait(0.1)
+                        currentFish = getFishCaught()
+                        attempts += 1
+                    end
+
+                    if attempts >= maxAttempts then
+                        warn("skip cycle")
+                    end
+
+                    reelTrack:Stop()
+                    lastFish = currentFish
                     catchCount += 1
+
+                    local currentCoins = getCoins()
                     statusLabel.Text = "Status: Catch " .. catchCount
                     statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
+
                     if catchCount >= 1000 then
                         sellAllFish(statusLabel)
                         catchCount = 0
@@ -246,12 +291,13 @@ local function startFishing(statusLabel)
     end)
 end
 
-
 local function stopFishing(statusLabel)
     autofish = false
     statusLabel.Text = "Status: X Not Running"
     statusLabel.TextColor3 = Color3.fromRGB(255, 120, 120)
 end
+
+
 -- =========================================================
 -- AUTO FISH TAB UI
 -- =========================================================
@@ -736,49 +782,6 @@ buyBaitBtn.MouseButton1Click:Connect(function()
         pcall(function()
             RFPurchaseBait:InvokeServer(amount)
         end)
-    end
-end)
-
--- =========================
--- Finish Delay Control
--- =========================
-
-local delayRow = Instance.new("Frame", MiscTab)
-delayRow.Size = UDim2.new(1, -20, 0, 30)
-delayRow.Position = UDim2.new(0,10,0,baitFrame.Position.Y.Offset + baitFrame.Size.Y.Offset + 20)
-delayRow.BackgroundTransparency = 1
-
-local delayLabel = Instance.new("TextLabel", delayRow)
-delayLabel.AnchorPoint = Vector2.new(0,0.5)
-delayLabel.Position = UDim2.new(0,10,0.5,0)
-delayLabel.Size = UDim2.new(0.7, 0, 1, 0) 
-delayLabel.Text = "Finish Delay (sec):"
-delayLabel.TextColor3 = Color3.fromRGB(200,200,200)
-delayLabel.BackgroundTransparency = 1
-delayLabel.Font = Enum.Font.Gotham
-delayLabel.TextSize = 14
-delayLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-local delayBox = Instance.new("TextBox", delayRow)
-delayBox.AnchorPoint = Vector2.new(1,0.5)
-delayBox.Position = UDim2.new(1, -20, 0.5, 0)
-delayBox.Size = UDim2.new(0, 60, 0.8, 0)
-delayBox.BackgroundColor3 = Color3.fromRGB(40, 0, 80)
-delayBox.BackgroundTransparency = 0.5 
-delayBox.TextColor3 = Color3.fromRGB(255,255,255)
-delayBox.Text = tostring(finishDelay)
-delayBox.ClearTextOnFocus = false
-delayBox.Font = Enum.Font.Code
-delayBox.TextSize = 14
-delayBox.BorderSizePixel = 1
-delayBox.BorderColor3 = Color3.fromRGB(255,255,255)
-
-delayBox.FocusLost:Connect(function(enterPressed)
-    local val = tonumber(delayBox.Text)
-    if val and val > 0 then
-        finishDelay = val
-    else
-        delayBox.Text = tostring(finishDelay)
     end
 end)
 
