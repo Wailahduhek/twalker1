@@ -403,8 +403,6 @@ local teleportKohana = {
 
 local teleportEsoteric = {
     {pos = Vector3.new(3165.5, -1226.5, 1320.4), lookDir = Vector3.new(0.37, -0.00, -0.93)},
-    {pos = Vector3.new(3214.2, -1302.9, 1322.3), lookDir = Vector3.new(-0.54, 0.00, -0.84)},
-    {pos = Vector3.new(3275.4, -1302.9, 1293.8), lookDir = Vector3.new(-0.50, -0.00, -0.87)},
     {pos = Vector3.new(3289.2, -1302.9, 1462.3), lookDir = Vector3.new(0.63, 0.00, 0.78)},
     {pos = Vector3.new(3176.4, -1302.9, 1470.4), lookDir = Vector3.new(-0.96, 0.00, 0.26)},
     {pos = Vector3.new(3030.0, -1301.0, 1421.9), lookDir = Vector3.new(0.05, -0.00, 1.00)},
