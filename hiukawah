@@ -1,4 +1,4 @@
-
+-- GRINDING
 
 -- // Services
 local Players = game:GetService("Players")
@@ -57,7 +57,7 @@ header.BackgroundTransparency = 1
 local title = Instance.new("TextLabel", header)
 title.Size = UDim2.new(1, -80, 1, 0)
 title.Position = UDim2.new(0, 10, 0, 0)
-title.Text = "Tole Walker 1.5"
+title.Text = "Tole Walker 2.0"
 title.TextColor3 = Color3.fromRGB(200, 200, 255)
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.BackgroundTransparency = 1
@@ -221,9 +221,85 @@ local function getFishCaught()
     return (data.Statistics and data.Statistics.FishCaught) or 0
 end
 
+
 local autofish = false
 local catchCount = 0
 local finishDelay = 1
+
+-- Remote Equip
+local Players = game:GetService("Players")
+local ReplStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
+local Replion = require(ReplStorage.Packages.Replion)
+local ClientData = Replion.Client:WaitReplion("Data")
+
+local remote = ReplStorage:WaitForChild("Packages")
+    :WaitForChild("_Index")
+    :WaitForChild("sleitnick_net@0.2.0")
+    :WaitForChild("net")
+    :WaitForChild("RE/EquipItem")
+
+local function getRodUUID(rodId)
+    local items = ClientData.Data.Items or ClientData.Data.Inventory or {}
+    local rods = items["Fishing Rods"] or {}
+    for _, rod in pairs(rods) do
+        if rod.Id == rodId then
+            return rod.UUID
+        end
+    end
+    return nil
+end
+
+
+local function buyRodU(rodId)
+    local rodData = {id = rodId} 
+    local purchaseRemote = net:WaitForChild("RF/PurchaseFishingRod")
+
+    pcall(function()
+        purchaseRemote:InvokeServer(rodData.id)
+    end)
+
+    task.wait(1)
+
+    local rodUUID = getRodUUID(rodId)
+    if rodUUID then
+        remote:FireServer(rodUUID, "Fishing Rods")
+        print("✅ Bought & Equipped rod ID " .. rodId)
+    else
+        warn("⚠️ Gagal equip rod ID " .. rodId .. " setelah beli")
+    end
+end
+
+
+local autofish = false
+local catchCount = 0
+local finishDelay = 1
+
+local function hasRod(rodId)
+    return getRodUUID(rodId) ~= nil
+end
+
+-- =========================================================
+-- Equip Best Rod
+-- =========================================================
+local function equipBestOwnedRod()
+    local priority = {168, 126, 5, 80, 1}
+    for _, rodId in ipairs(priority) do
+        if hasRod(rodId) then
+            local rodUUID = getRodUUID(rodId)
+            if rodUUID then
+                remote:FireServer(rodUUID, "Fishing Rods")
+                currentRod = rodId
+                print("🎣 Start with best owned rod ID " .. rodId)
+                pcall(function()
+                    equipRemote:FireServer(1)
+                    task.wait(1)
+                end)
+                return
+            end
+        end
+    end
+end
 
 local function startFishing(statusLabel)
     if autofish then return end
@@ -235,7 +311,7 @@ local function startFishing(statusLabel)
 
     task.spawn(function()
         pcall(function()
-            equipRemote:FireServer(1)
+            equipBestOwnedRod()
             task.wait(1)
 
             while autofish do
@@ -258,14 +334,14 @@ local function startFishing(statusLabel)
                     baitConn:Disconnect()
                     fishConn:Disconnect()
 
+
                     local currentFish = getFishCaught()
-                    local attempts = 0
-                    local maxAttempts = 20
+                    local attempts, maxAttempts = 0, 50
                     while currentFish <= lastFish and attempts < maxAttempts do
                         finishRemote:FireServer()
                         task.wait(0.1)
                         currentFish = getFishCaught()
-                        attempts += 1
+                        attempts = attempts + 1
                     end
 
                     if attempts >= maxAttempts then
@@ -290,6 +366,7 @@ local function startFishing(statusLabel)
         end)
     end)
 end
+
 
 local function stopFishing(statusLabel)
     autofish = false
@@ -401,13 +478,6 @@ local teleportKohanaV = {
     {pos = Vector3.new(-629.3, 30.0, 99.4), lookDir = Vector3.new(0, 0, -1)},
 }
 
-local teleportEsoteric = {
-    {pos = Vector3.new(3165.5, -1226.5, 1320.4), lookDir = Vector3.new(0.37, -0.00, -0.93)},
-    {pos = Vector3.new(3289.2, -1302.9, 1462.3), lookDir = Vector3.new(0.63, 0.00, 0.78)},
-    {pos = Vector3.new(3176.4, -1302.9, 1470.4), lookDir = Vector3.new(-0.96, 0.00, 0.26)},
-    {pos = Vector3.new(3030.0, -1301.0, 1421.9), lookDir = Vector3.new(0.05, -0.00, 1.00)},
-}
-
 local teleportKohana = {
     {pos = Vector3.new(-844.8, 55.5, 355.9), lookDir = Vector3.new(-0.88, -0.00, 0.47)},
     {pos = Vector3.new(-921.6, 52.8, 357.3), lookDir = Vector3.new(0.85, 0.00, 0.52)},
@@ -415,6 +485,26 @@ local teleportKohana = {
     {pos = Vector3.new(-638.7, 16.0, 566.2), lookDir = Vector3.new(0.18, 0.00, -0.98)},
 }
 
+local teleportEsoteric = {
+    {pos = Vector3.new(3165.5, -1226.5, 1320.4), lookDir = Vector3.new(0.37, -0.00, -0.93)},
+    {pos = Vector3.new(3289.2, -1302.9, 1462.3), lookDir = Vector3.new(0.63, 0.00, 0.78)},
+    {pos = Vector3.new(3176.4, -1302.9, 1470.4), lookDir = Vector3.new(-0.96, 0.00, 0.26)},
+    {pos = Vector3.new(3030.0, -1301.0, 1421.9), lookDir = Vector3.new(0.05, -0.00, 1.00)},
+}
+
+local teleportTreasureroom = {
+    {pos = Vector3.new(-3655.9, -268.5, -1630.1), lookDir = Vector3.new(0.95, 0.00, 0.32)},
+    {pos = Vector3.new(-3598.0, -275.7, -1641.0), lookDir = Vector3.new(-0.66, 0.00, 0.75)},
+    {pos = Vector3.new(-3550.9, -261.7, -1671.5), lookDir = Vector3.new(-0.99, 0.00, -0.16)},
+    {pos = Vector3.new(-3648.0, -264.0, -1677.4), lookDir = Vector3.new(0.98, -0.00, 0.19)},
+}
+
+local teleportTropical = {
+    {pos = Vector3.new(-2190.8, 25.4, 3594.3), lookDir = Vector3.new(-0.63, -0.00, -0.78)},
+    {pos = Vector3.new(-2157.6, 25.4, 3828.3), lookDir = Vector3.new(-0.99, 0.00, -0.17)},
+    {pos = Vector3.new(-2018.6, 25.4, 3865.3), lookDir = Vector3.new(0.21, -0.00, 0.98)},
+    {pos = Vector3.new(-1957.6, 25.4, 3755.6), lookDir = Vector3.new(0.96, 0.00, -0.27)},
+}
 createButton("Coral Reefs", 40, function()
     local plr = game.Players.LocalPlayer
     local spot = teleportCoral[math.random(1, #teleportCoral)]
@@ -480,6 +570,23 @@ end, tpTab)
 createButton("Kohana", 320, function()
     local plr = game.Players.LocalPlayer
     local spot = teleportKohana[math.random(1, #teleportKohana)]
+    plr.Character:SetPrimaryPartCFrame(CFrame.new(
+        spot.pos,
+        spot.pos + spot.lookDir
+    ))
+end, tpTab)
+
+createButton("Treasure Room", 360, function()
+    local plr = game.Players.LocalPlayer
+    local spot = teleportTreasureroom[math.random(1, #teleportTreasureroom)]
+    plr.Character:SetPrimaryPartCFrame(CFrame.new(
+        spot.pos,
+        spot.pos + spot.lookDir
+    ))
+end, tpTab)
+createButton("Tropical Island", 400, function()
+    local plr = game.Players.LocalPlayer
+    local spot = teleportTropical[math.random(1, #teleportTropical)]
     plr.Character:SetPrimaryPartCFrame(CFrame.new(
         spot.pos,
         spot.pos + spot.lookDir
@@ -591,40 +698,200 @@ createButton("Auto Weather", 120, function()
     end
 end, setTab)
 
-
--- =========================================================
+-- =========================
 -- MISC TAB
--- =========================================================
+-- =========================
 local MiscTab = contents["Misc"]
 
--- =========================
+local miscContainer = Instance.new("ScrollingFrame", MiscTab)
+miscContainer.Size = UDim2.new(1, -20, 1, -20)
+miscContainer.Position = UDim2.new(0, 10, 0, 10)
+miscContainer.BackgroundTransparency = 1
+miscContainer.ScrollBarThickness = 6
+miscContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+
+local miscLayout = Instance.new("UIListLayout", miscContainer)
+miscLayout.SortOrder = Enum.SortOrder.LayoutOrder
+miscLayout.Padding = UDim.new(0, 10)
+
+miscLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    miscContainer.CanvasSize = UDim2.new(0, 0, 0, miscLayout.AbsoluteContentSize.Y + 20)
+end)
+
+-- =========================================================
+-- Auto Buy & Equip Rod
+-- =========================================================
+local currentRod = nil
+local function buyOrEquipRod(rodId)
+    local purchaseRemote = net:WaitForChild("RF/PurchaseFishingRod")
+    if currentRod == rodId then return end
+
+    if hasRod(rodId) then
+        local rodUUID = getRodUUID(rodId)
+        if rodUUID then
+            remote:FireServer(rodUUID, "Fishing Rods")
+            currentRod = rodId
+            print("✅ Equipped rod ID " .. rodId)
+        end
+        return
+    end
+
+    pcall(function() purchaseRemote:InvokeServer(rodId) end)
+    task.wait(1)
+
+    local rodUUID = getRodUUID(rodId)
+    if rodUUID then
+        remote:FireServer(rodUUID, "Fishing Rods")
+        currentRod = rodId
+        print("✅ Bought & Equipped rod ID " .. rodId)
+    else
+        warn("⚠️ Gagal beli/equip rod ID " .. rodId)
+    end
+end
+
+-- =========================================================
+-- Grinding Function
+-- =========================================================
+local autofish = false
+local catchCount = 0
+local function grinding(statusLabel)
+    if autofish then return end
+    autofish = true
+    statusLabel.Text = "Status: ✔ Running"
+    statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
+
+    local plr = game.Players.LocalPlayer
+    repeat task.wait() until plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+
+    local lastFish = getFishCaught()
+
+    plr.Character:SetPrimaryPartCFrame(
+        CFrame.new(Vector3.new(-629.3, 30.0, 99.0), Vector3.new(-629.3, 30.0, 99.0) + Vector3.new(0,0,-1))
+    )
+    task.wait(5)
+
+    task.spawn(function()
+        equipBestOwnedRod()
+        task.wait(1)
+        while autofish do
+            local ok, err = pcall(function()
+                local timestamp = perfectCast and 9999999999 or (os.clock() + math.random())
+                local reelTrack = playAnimation("rbxassetid://134965425664034")
+                if RodShake then RodShake:Play() end
+                reelTrack:Play()
+                rodRemote:InvokeServer(timestamp)
+                task.wait(0.1)
+                reelTrack:Play()
+                miniGameRemote:InvokeServer(-1.238,0.969)
+                task.wait(0.3)
+
+                local baitConn = baitRemote.OnClientEvent:Connect(function() end)
+                local fishConn = fishRemote.OnClientEvent:Connect(function() end)
+                task.wait(finishDelay)
+                finishRemote:FireServer()
+                baitConn:Disconnect()
+                fishConn:Disconnect()
+
+                local currentFish = getFishCaught()
+                local attempts, maxAttempts = 0, 50
+                while currentFish <= lastFish and attempts < maxAttempts do
+                    finishRemote:FireServer()
+                    task.wait(0.1)
+                    currentFish = getFishCaught()
+                    attempts = attempts + 1
+                end
+
+                reelTrack:Stop()
+                lastFish = currentFish
+                catchCount = catchCount + 1
+
+                local coins = getCoins()
+                if coins >= 8000000 then
+                    buyOrEquipRod(168)
+                elseif coins >= 3000000 then
+                    buyOrEquipRod(126)
+                elseif coins >= 1000000 then
+                    buyOrEquipRod(5)
+                elseif coins >= 50000 then
+                    buyOrEquipRod(80)
+                end
+
+                statusLabel.Text = "Status: Catch " .. catchCount
+                if catchCount >= 50 then
+                    sellAllFish(statusLabel)
+                    catchCount = 0
+                end
+            end)
+            if not ok then warn("Grinding error: ", err) end
+            task.wait(0.5)
+        end
+    end)
+end
+
+-- =============================
+-- Utility: Create Popup
+-- =============================
+local function createPopup(items, onSelect)
+    local popup = Instance.new("ScrollingFrame")
+    popup.Size = UDim2.new(1, 0, 0, math.min((#items + 1) * 27, 150))
+    popup.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    popup.BorderSizePixel = 0
+    popup.ScrollBarThickness = 6
+    popup.CanvasSize = UDim2.new(0, 0, 0, (#items + 1) * 27)
+    popup.Visible = true
+    Instance.new("UICorner", popup).CornerRadius = UDim.new(0, 6)
+
+    local layout = Instance.new("UIListLayout", popup)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 2)
+    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+    for _, name in ipairs(items) do
+        local btn = Instance.new("TextButton", popup)
+        btn.Size = UDim2.new(0.9, 0, 0, 25)
+        btn.BackgroundColor3 = Color3.fromRGB(60, 0, 100)
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = 13
+        btn.Text = name
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+
+        btn.MouseButton1Click:Connect(function()
+            if onSelect then onSelect(name) end
+            popup:Destroy()
+        end)
+    end
+
+    local filler = Instance.new("Frame", popup)
+    filler.Size = UDim2.new(1, 0, 0, 25)
+    filler.BackgroundTransparency = 1
+
+    return popup
+end
+
+-- =============================
 -- Rods Shop
--- =========================
+-- =============================
 local rods = {
-    ["Luck Rod"] = {id = 79, price = "350 Coins"},
-    ["Carbon Rod"] = {id = 76, price = "900 Coins"},
-    ["Grass Rod"] = {id = 85, price = "1.5k Coins"},
-    ["Demascus Rod"] = {id = 77, price = "3k Coins"},
-    ["Ice Rod"] = {id = 78, price = "5k Coins"},
-    ["Lucky Rod"] = {id = 4, price = "15k Coins"},
-    ["Midnight Rod"] = {id = 80, price = "50k Coins"},
-    ["Steampunk Rod"] = {id = 6, price = "215k Coins"},
-    ["Chrome Rod"] = {id = 7, price = "437k Coins"},
-    ["Astral Rod"] = {id = 5, price = "1M Coins"},
-    ["Ares Rod"] = {id = 126, price = "3M Coins"},
+    ["Luck Rod"]   = {id = 79,  price = "350 Coins"},
+    ["Carbon Rod"] = {id = 76,  price = "900 Coins"},
+    ["Grass Rod"]  = {id = 85,  price = "1.5k Coins"},
+    ["Astral Rod"] = {id = 5,   price = "1M Coins"},
+    ["Ares Rod"]   = {id = 126, price = "3M Coins"},
     ["Angler Rod"] = {id = 168, price = "8M Coins"},
 }
 
-local selectedRod = "Steampunk Rod"
-
-local rodRow = Instance.new("Frame", MiscTab)
-rodRow.Size = UDim2.new(1, -20, 0, 30)
-rodRow.Position = UDim2.new(0, 10, 0, 10)
+local selectedRod = "Luck Rod"
+local rodRow = Instance.new("Frame", miscContainer)
+rodRow.Size = UDim2.new(1, 0, 0, 30)
 rodRow.BackgroundTransparency = 1
+rodRow.LayoutOrder = 1
+local rodLayout = Instance.new("UIListLayout", rodRow)
+rodLayout.FillDirection = Enum.FillDirection.Horizontal
+rodLayout.Padding = UDim.new(0, 10)
 
 local rodDropdown = Instance.new("TextButton", rodRow)
 rodDropdown.Size = UDim2.new(0,175,0,30)
-rodDropdown.Position = UDim2.new(0,0,0,0)
 rodDropdown.Text = selectedRod.." ("..rods[selectedRod].price..")"
 rodDropdown.BackgroundColor3 = Color3.fromRGB(40,0,80)
 rodDropdown.TextColor3 = Color3.fromRGB(255,255,255)
@@ -634,8 +901,7 @@ Instance.new("UICorner", rodDropdown).CornerRadius = UDim.new(0,6)
 
 local buyRodBtn = Instance.new("TextButton", rodRow)
 buyRodBtn.Size = UDim2.new(0,150,0,30)
-buyRodBtn.Position = UDim2.new(0, rodDropdown.Size.X.Offset + 10, 0, 0)
-buyRodBtn.Text = "🛒 Buy Selected Rod"
+buyRodBtn.Text = "🛒 Buy Rod"
 buyRodBtn.BackgroundColor3 = Color3.fromRGB(80,0,120)
 buyRodBtn.TextColor3 = Color3.fromRGB(255,255,255)
 buyRodBtn.Font = Enum.Font.GothamBold
@@ -643,106 +909,56 @@ buyRodBtn.TextSize = 14
 Instance.new("UICorner", buyRodBtn).CornerRadius = UDim.new(0,6)
 buyRodBtn.Visible = false
 
-local rodPopup = Instance.new("ScrollingFrame", MiscTab)
-rodPopup.Size = UDim2.new(0, 180, 0, 150)
-rodPopup.Position = UDim2.new(0, rodDropdown.Position.X.Offset, 0, rodRow.Position.Y.Offset + rodRow.Size.Y.Offset + 5)
-rodPopup.BackgroundColor3 = Color3.fromRGB(0,0,0)
-rodPopup.BackgroundTransparency = 0.7
-rodPopup.Visible = false
-rodPopup.CanvasSize = UDim2.new(0,0,0,0)
-rodPopup.ScrollBarThickness = 6
-Instance.new("UICorner", rodPopup).CornerRadius = UDim.new(0,6)
-
-local rodLayout = Instance.new("UIListLayout", rodPopup)
-rodLayout.SortOrder = Enum.SortOrder.LayoutOrder
-rodLayout.Padding = UDim.new(0,2)
-rodLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-local displayedRods = {"Angler Rod","Astral Rod","Ares Rod","Steampunk Rod","Midnight Rod","Chrome Rod"}
-
-for _, rodName in ipairs(displayedRods) do
-    local data = rods[rodName]
-    local btn = Instance.new("TextButton", rodPopup)
-    btn.Size = UDim2.new(0.9,0,0,25)
-    btn.AnchorPoint = Vector2.new(0.5,0)
-    btn.Position = UDim2.new(0.5,0,0,0)
-    btn.Text = rodName.." ("..data.price..")"
-    btn.BackgroundColor3 = Color3.fromRGB(60,0,100)
-    btn.TextColor3 = Color3.fromRGB(255,255,255)
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 13
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,4)
-
-    btn.MouseButton1Click:Connect(function()
-        selectedRod = rodName
-        rodDropdown.Text = rodName.." ("..data.price..")"
-        rodPopup.Visible = false
-        buyRodBtn.Visible = true
-    end)
-end
-
+local rodPopup
 rodDropdown.MouseButton1Click:Connect(function()
-    rodPopup.Visible = not rodPopup.Visible
-    buyRodBtn.Visible = false
-    if rodPopup.Visible then
-        local count = #displayedRods
-        rodPopup.CanvasSize = UDim2.new(0,0,0,count*27)
+    if rodPopup then
+        rodPopup:Destroy()
+        rodPopup = nil
+    else
+        local rodNames = {}
+        for name,_ in pairs(rods) do table.insert(rodNames, name) end
+        rodPopup = createPopup(rodNames, function(selected)
+            selectedRod = selected
+            rodDropdown.Text = selected.." ("..rods[selected].price..")"
+            buyRodBtn.Visible = true
+        end)
+        rodPopup.LayoutOrder = rodRow.LayoutOrder + 0.1
+        rodPopup.Parent = miscContainer
     end
 end)
 
 buyRodBtn.MouseButton1Click:Connect(function()
     local rodData = rods[selectedRod]
     if rodData then
-        pcall(function()
-            local rodRemote = net:WaitForChild("RF/PurchaseFishingRod")
-            rodRemote:InvokeServer(rodData.id)
-        end)
+        local rodRemote = net:WaitForChild("RF/PurchaseFishingRod")
+        pcall(function() rodRemote:InvokeServer(rodData.id) end)
     end
 end)
 
--- =========================
+-- =============================
 -- Bait Shop
--- =========================
+-- =============================
 local baits = {
-    ["TopWater Bait"] = 10,
-    ["Lucky Bait"] = 2,
-    ["Midnight Bait"] = 3,
-    ["Chroma Bait"] = 6,
-    ["Dark Mater Bait"] = 8,
-    ["Corrupt Bait"] = 15,
-    ["Aether Bait"] = 16
+    ["TopWater Bait (100 Coins)"] = 10,
+    ["Lucky Bait (1k Coins)"]     = 2,
+    ["Midnight Bait (3k Coins)"]  = 3,
+    ["Chroma Bait (290k Coins)"]  = 6,
+    ["Dark Mater Bait (630k)"]    = 8,
+    ["Corrupt Bait (1.15M)"]      = 15,
+    ["Aether Bait (3.7M)"]        = 16,
 }
 
-local baitNames = {
-    "TopWater Bait (100 Coins)",
-    "Lucky Bait (1k Coins)",
-    "Midnight Bait (3k Coins)",
-    "Chroma Bait (290k Coins)",
-    "Dark Mater Bait (630k Coins)",
-    "Corrupt Bait (1.15M Coins)",
-    "Aether Bait (3.7M Coins)"
-}
+local selectedBait = "TopWater Bait (100 Coins)"
+local baitRow = Instance.new("Frame", miscContainer)
+baitRow.Size = UDim2.new(1, 0, 0, 30)
+baitRow.BackgroundTransparency = 1
+baitRow.LayoutOrder = 2
+local baitLayout = Instance.new("UIListLayout", baitRow)
+baitLayout.FillDirection = Enum.FillDirection.Horizontal
+baitLayout.Padding = UDim.new(0, 10)
 
-local baitKeyMap = {
-    ["TopWater Bait (100 Coins)"] = "TopWater Bait",
-    ["Lucky Bait (1k Coins)"] = "Lucky Bait",
-    ["Midnight Bait (3k Coins)"] = "Midnight Bait",
-    ["Chroma Bait (290k Coins)"] = "Chroma Bait",
-    ["Dark Mater Bait (630k Coins)"] = "Dark Mater Bait",
-    ["Corrupt Bait (1.15M Coins)"] = "Corrupt Bait",
-    ["Aether Bait (3.7M Coins)"] = "Aether Bait"
-}
-
-local selectedBait = baitNames[1]
-
-local baitFrame = Instance.new("Frame", MiscTab)
-baitFrame.Size = UDim2.new(1, -20, 0, 60)
-baitFrame.Position = UDim2.new(0,10,0,rodRow.Position.Y.Offset + rodRow.Size.Y.Offset + 20)
-baitFrame.BackgroundTransparency = 1
-
-local baitDropdown = Instance.new("TextButton", baitFrame)
+local baitDropdown = Instance.new("TextButton", baitRow)
 baitDropdown.Size = UDim2.new(0,175,0,30)
-baitDropdown.Position = UDim2.new(0,0,0,0)
 baitDropdown.Text = selectedBait
 baitDropdown.BackgroundColor3 = Color3.fromRGB(40,0,80)
 baitDropdown.TextColor3 = Color3.fromRGB(255,255,255)
@@ -750,10 +966,9 @@ baitDropdown.Font = Enum.Font.GothamBold
 baitDropdown.TextSize = 14
 Instance.new("UICorner", baitDropdown).CornerRadius = UDim.new(0,6)
 
-local buyBaitBtn = Instance.new("TextButton", baitFrame)
+local buyBaitBtn = Instance.new("TextButton", baitRow)
 buyBaitBtn.Size = UDim2.new(0,150,0,30)
-buyBaitBtn.Position = UDim2.new(0, baitDropdown.Size.X.Offset + 10, 0, 0)
-buyBaitBtn.Text = "🛒 Buy Selected Bait"
+buyBaitBtn.Text = "🛒 Buy Bait"
 buyBaitBtn.BackgroundColor3 = Color3.fromRGB(80,0,120)
 buyBaitBtn.TextColor3 = Color3.fromRGB(255,255,255)
 buyBaitBtn.Font = Enum.Font.GothamBold
@@ -761,60 +976,144 @@ buyBaitBtn.TextSize = 14
 Instance.new("UICorner", buyBaitBtn).CornerRadius = UDim.new(0,6)
 buyBaitBtn.Visible = false
 
-local baitPopup = Instance.new("ScrollingFrame", baitFrame)
-baitPopup.Size = UDim2.new(0, 180, 0, 100)
-baitPopup.Position = UDim2.new(0, baitDropdown.Position.X.Offset, 0, baitDropdown.Position.Y.Offset + baitDropdown.Size.Y.Offset + 5)
-baitPopup.BackgroundColor3 = Color3.fromRGB(0,0,0)
-baitPopup.BackgroundTransparency = 0.7
-baitPopup.Visible = false
-baitPopup.CanvasSize = UDim2.new(0,0,0,0)
-baitPopup.ScrollBarThickness = 6
-Instance.new("UICorner", baitPopup).CornerRadius = UDim.new(0,6)
-
-local baitLayout = Instance.new("UIListLayout", baitPopup)
-baitLayout.SortOrder = Enum.SortOrder.LayoutOrder
-baitLayout.Padding = UDim.new(0,2)
-baitLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-for _, baitName in ipairs(baitNames) do
-    local btn = Instance.new("TextButton", baitPopup)
-    btn.Size = UDim2.new(0.9,0,0,25)
-    btn.AnchorPoint = Vector2.new(0.5,0)
-    btn.Position = UDim2.new(0.5,0,0,0)
-    btn.Text = baitName
-    btn.BackgroundColor3 = Color3.fromRGB(60,0,100)
-    btn.TextColor3 = Color3.fromRGB(255,255,255)
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 13
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,4)
-
-    btn.MouseButton1Click:Connect(function()
-        selectedBait = baitName
-        baitDropdown.Text = baitName
-        baitPopup.Visible = false
-        buyBaitBtn.Visible = true
-    end)
-end
-
+local baitPopup
 baitDropdown.MouseButton1Click:Connect(function()
-    baitPopup.Visible = not baitPopup.Visible
-    buyBaitBtn.Visible = false
-    if baitPopup.Visible then
-        baitPopup.CanvasSize = UDim2.new(0,0,0,#baitNames*27)
+    if baitPopup then
+        baitPopup:Destroy()
+        baitPopup = nil
+    else
+        local baitNames = {}
+        for name,_ in pairs(baits) do table.insert(baitNames, name) end
+        baitPopup = createPopup(baitNames, function(selected)
+            selectedBait = selected
+            baitDropdown.Text = selected
+            buyBaitBtn.Visible = true
+        end)
+        baitPopup.LayoutOrder = baitRow.LayoutOrder + 0.1
+        baitPopup.Parent = miscContainer
     end
 end)
-local RFPurchaseBait = net:WaitForChild("RF/PurchaseBait")
 
 buyBaitBtn.MouseButton1Click:Connect(function()
-    local key = baitKeyMap[selectedBait]
-    if key and baits[key] then
-        local amount = baits[key]
-        pcall(function()
-            RFPurchaseBait:InvokeServer(amount)
-        end)
+    if baits[selectedBait] then
+        local RFPurchaseBait = net:WaitForChild("RF/PurchaseBait")
+        pcall(function() RFPurchaseBait:InvokeServer(baits[selectedBait]) end)
     end
 end)
 
+
+-- ========================================
+-- Player Teleport 
+-- ========================================
+
+local LocalPlayer = game.Players.LocalPlayer
+local Players = game:GetService("Players")
+
+local function teleportToPlayerExact(username)
+    local target = Players:FindFirstChild(username)
+    if target and target.Character and LocalPlayer.Character then
+        local myHRP = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
+        if myHRP and targetHRP then
+            myHRP.CFrame = targetHRP.CFrame + Vector3.new(2, 0, 0)
+            print("✅ Teleported to " .. target.DisplayName)
+        end
+    end
+end
+
+local playerDropdownBtn = Instance.new("TextButton", miscContainer)
+playerDropdownBtn.Size = UDim2.new(1, 0, 0, 30)
+playerDropdownBtn.Text = "🌀 Teleport to Player"
+playerDropdownBtn.BackgroundColor3 = Color3.fromRGB(40,0,80) 
+playerDropdownBtn.TextColor3 = Color3.fromRGB(255,255,255)
+playerDropdownBtn.Font = Enum.Font.GothamBold
+playerDropdownBtn.TextSize = 14
+Instance.new("UICorner", playerDropdownBtn).CornerRadius = UDim.new(0,6)
+
+local popupFrame = Instance.new("Frame", miscContainer)
+popupFrame.Size = UDim2.new(1, -10, 0, 120)
+popupFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+popupFrame.Visible = false
+Instance.new("UICorner", popupFrame).CornerRadius = UDim.new(0,6)
+
+local scrolling = Instance.new("ScrollingFrame", popupFrame)
+scrolling.Size = UDim2.new(1, 0, 1, 0)
+scrolling.CanvasSize = UDim2.new(0,0,0,0)
+scrolling.ScrollBarThickness = 4
+scrolling.BackgroundTransparency = 1
+
+local popupLayout = Instance.new("UIListLayout", scrolling)
+popupLayout.Padding = UDim.new(0,3)
+
+local function refreshPlayerList()
+    for _, child in ipairs(scrolling:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+
+    local count = 0
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            count += 1
+            local btn = Instance.new("TextButton", scrolling)
+            btn.Size = UDim2.new(1, -5, 0, 25)
+            btn.Text = p.DisplayName
+            btn.BackgroundColor3 = Color3.fromRGB(60,0,100) 
+            btn.TextColor3 = Color3.fromRGB(255,255,255)
+            btn.Font = Enum.Font.Gotham
+            btn.TextSize = 13
+            Instance.new("UICorner", btn).CornerRadius = UDim.new(0,4)
+
+            btn.MouseButton1Click:Connect(function()
+                teleportToPlayerExact(p.Name)
+                popupFrame.Visible = false
+            end)
+        end
+    end
+
+    scrolling.CanvasSize = UDim2.new(0,0,0,count * 28)
+end
+
+playerDropdownBtn.MouseButton1Click:Connect(function()
+    popupFrame.Visible = not popupFrame.Visible
+    if popupFrame.Visible then
+        refreshPlayerList()
+    end
+end)
+
+Players.PlayerAdded:Connect(refreshPlayerList)
+Players.PlayerRemoving:Connect(refreshPlayerList)
+
+
+-- =============================
+-- Grinding Toggle
+-- =============================
+local grindingBtn = Instance.new("TextButton", miscContainer)
+grindingBtn.LayoutOrder = 4
+grindingBtn.Size = UDim2.new(1, 0, 0, 30)
+grindingBtn.Text = "🎣 Grinding: OFF"
+grindingBtn.BackgroundColor3 = Color3.fromRGB(80,0,120)
+grindingBtn.TextColor3 = Color3.fromRGB(255,255,255)
+grindingBtn.Font = Enum.Font.GothamBold
+grindingBtn.TextSize = 14
+Instance.new("UICorner", grindingBtn).CornerRadius = UDim.new(0,6)
+
+local grindingToggle = false
+grindingBtn.MouseButton1Click:Connect(function()
+    grindingToggle = not grindingToggle
+    if grindingToggle then
+        grindingBtn.Text = "🎣 Grinding Astral: ON"
+        grinding(grindingBtn)
+    else
+        grindingBtn.Text = "🎣 Grinding Astral: OFF"
+        autofish = false
+    end
+end)
+
+
+local bottomSpacer = Instance.new("Frame", miscContainer)
+bottomSpacer.Size = UDim2.new(1, 0, 0, 60)
+bottomSpacer.BackgroundTransparency = 1
+bottomSpacer.LayoutOrder = 999
 -- =========================================================
 -- MINIMIZE & CLOSE
 -- =========================================================
