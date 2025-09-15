@@ -394,7 +394,7 @@ local teleportFisherman = {
     {pos = Vector3.new(-114.6, 3.3, 2929.4), lookDir = Vector3.new(-0.60, -0.00, -0.80)},
 }
 
-local teleportKohana = {
+local teleportKohanaV = {
     {pos = Vector3.new(-629.3, 30.0, 99.0), lookDir = Vector3.new(0, 0, -1)},
     {pos = Vector3.new(-629.3, 30.0, 99.8), lookDir = Vector3.new(0, 0, -1)},
     {pos = Vector3.new(-629.3, 30.0, 99.6), lookDir = Vector3.new(0, 0, -1)},
@@ -408,7 +408,12 @@ local teleportEsoteric = {
     {pos = Vector3.new(3030.0, -1301.0, 1421.9), lookDir = Vector3.new(0.05, -0.00, 1.00)},
 }
 
-
+local teleportKohana = {
+    {pos = Vector3.new(-844.8, 55.5, 355.9), lookDir = Vector3.new(-0.88, -0.00, 0.47)},
+    {pos = Vector3.new(-921.6, 52.8, 357.3), lookDir = Vector3.new(0.85, 0.00, 0.52)},
+    {pos = Vector3.new(-1027.6, 31.5, 418.3), lookDir = Vector3.new(1.00, 0.00, -0.02)},
+    {pos = Vector3.new(-638.7, 16.0, 566.2), lookDir = Vector3.new(0.18, 0.00, -0.98)},
+}
 
 createButton("Coral Reefs", 40, function()
     local plr = game.Players.LocalPlayer
@@ -430,7 +435,7 @@ end, tpTab)
 
 createButton("Kohana Volcano", 120, function()
     local plr = game.Players.LocalPlayer
-    local spot = teleportKohana[math.random(1, #teleportKohana)]
+    local spot = teleportKohanaV[math.random(1, #teleportKohanaV)]
     plr.Character:SetPrimaryPartCFrame(CFrame.new(
         spot.pos,
         spot.pos + spot.lookDir
@@ -466,6 +471,15 @@ end, tpTab)
 createButton("Fisherman Island", 280, function()
     local plr = game.Players.LocalPlayer
     local spot = teleportFisherman[math.random(1, #teleportFisherman)]
+    plr.Character:SetPrimaryPartCFrame(CFrame.new(
+        spot.pos,
+        spot.pos + spot.lookDir
+    ))
+end, tpTab)
+
+createButton("Kohana", 320, function()
+    local plr = game.Players.LocalPlayer
+    local spot = teleportKohana[math.random(1, #teleportKohana)]
     plr.Character:SetPrimaryPartCFrame(CFrame.new(
         spot.pos,
         spot.pos + spot.lookDir
