@@ -186,23 +186,16 @@ local function playAnimation(animId)
     return track
 end
 
-local function sellAllFish(statusLabel)
+local function sellAllFish()
     local net = game:GetService("ReplicatedStorage"):WaitForChild("Packages")
-        :WaitForChild("_Index")
-        :WaitForChild("sleitnick_net@0.2.0")
-        :WaitForChild("net")
+        :WaitForChild("_Index"):WaitForChild("sleitnick_net@0.2.0"):WaitForChild("net")
     local sellRemote = net:WaitForChild("RF/SellAllItems")
-
-    statusLabel.Text = "Status: 💰 Selling..."
-    statusLabel.TextColor3 = Color3.fromRGB(255, 220, 100)
-
     pcall(function()
         sellRemote:InvokeServer()
+        updateAutoWeatherLabel("✅ Items Sold!", 2)
     end)
 
     task.wait(1)
-    statusLabel.Text = "Status: ✔ Running"
-    statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
 end
 
 
@@ -357,7 +350,8 @@ local function startFishing(statusLabel)
                     statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
 
                     if catchCount >= 1000 then
-                        sellAllFish(statusLabel)
+                        sellAllFish()
+                        task.wait(5)
                         catchCount = 0
                     end
                 end)
@@ -711,25 +705,24 @@ createButton("Auto Weather", 120, function()
     end
 end, setTab)
 
+
+
+
 -- =========================
--- MISC TAB
+-- MISC TAB (Clean)
 -- =========================
 local MiscTab = contents["Misc"]
 
-local miscContainer = Instance.new("ScrollingFrame", MiscTab)
-miscContainer.Size = UDim2.new(1, -20, 1, -20)
-miscContainer.Position = UDim2.new(0, 10, 0, 10)
-miscContainer.BackgroundTransparency = 1
-miscContainer.ScrollBarThickness = 6
-miscContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
-
-local miscLayout = Instance.new("UIListLayout", miscContainer)
+-- layout + autosize
+local miscLayout = Instance.new("UIListLayout", MiscTab)
 miscLayout.SortOrder = Enum.SortOrder.LayoutOrder
 miscLayout.Padding = UDim.new(0, 10)
+miscLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
 miscLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    miscContainer.CanvasSize = UDim2.new(0, 0, 0, miscLayout.AbsoluteContentSize.Y + 20)
+    MiscTab.CanvasSize = UDim2.new(0, 0, 0, miscLayout.AbsoluteContentSize.Y + 20)
 end)
+
 
 -- =========================================================
 -- Auto Buy & Equip Rod
@@ -778,9 +771,6 @@ local function grinding(statusLabel)
 
     local lastFish = getFishCaught()
 
-    plr.Character:SetPrimaryPartCFrame(
-        CFrame.new(Vector3.new(-629.3, 30.0, 99.0), Vector3.new(-629.3, 30.0, 99.0) + Vector3.new(0,0,-1))
-    )
     task.wait(5)
 
     task.spawn(function()
@@ -831,7 +821,8 @@ local function grinding(statusLabel)
 
                 statusLabel.Text = "Status: Catch " .. catchCount
                 if catchCount >= 50 then
-                    sellAllFish(statusLabel)
+                    sellAllFish()
+                    task.wait(5)
                     catchCount = 0
                 end
             end)
@@ -840,51 +831,9 @@ local function grinding(statusLabel)
         end
     end)
 end
-
--- =============================
--- Utility: Create Popup
--- =============================
-local function createPopup(items, onSelect)
-    local popup = Instance.new("ScrollingFrame")
-    popup.Size = UDim2.new(1, 0, 0, math.min((#items + 1) * 27, 150))
-    popup.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    popup.BorderSizePixel = 0
-    popup.ScrollBarThickness = 6
-    popup.CanvasSize = UDim2.new(0, 0, 0, (#items + 1) * 27)
-    popup.Visible = true
-    Instance.new("UICorner", popup).CornerRadius = UDim.new(0, 6)
-
-    local layout = Instance.new("UIListLayout", popup)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, 2)
-    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-    for _, name in ipairs(items) do
-        local btn = Instance.new("TextButton", popup)
-        btn.Size = UDim2.new(0.9, 0, 0, 25)
-        btn.BackgroundColor3 = Color3.fromRGB(60, 0, 100)
-        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btn.Font = Enum.Font.Gotham
-        btn.TextSize = 13
-        btn.Text = name
-        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
-
-        btn.MouseButton1Click:Connect(function()
-            if onSelect then onSelect(name) end
-            popup:Destroy()
-        end)
-    end
-
-    local filler = Instance.new("Frame", popup)
-    filler.Size = UDim2.new(1, 0, 0, 25)
-    filler.BackgroundTransparency = 1
-
-    return popup
-end
-
--- =============================
+-- =========================================================
 -- Rods Shop
--- =============================
+-- =========================================================
 local rods = {
     ["Luck Rod"]   = {id = 79,  price = "350 Coins"},
     ["Carbon Rod"] = {id = 76,  price = "900 Coins"},
@@ -894,63 +843,62 @@ local rods = {
     ["Angler Rod"] = {id = 168, price = "8M Coins"},
 }
 
-local selectedRod = "Luck Rod"
-local rodRow = Instance.new("Frame", miscContainer)
-rodRow.Size = UDim2.new(1, 0, 0, 30)
-rodRow.BackgroundTransparency = 1
-rodRow.LayoutOrder = 1
-local rodLayout = Instance.new("UIListLayout", rodRow)
-rodLayout.FillDirection = Enum.FillDirection.Horizontal
-rodLayout.Padding = UDim.new(0, 10)
+local rodBtn = Instance.new("TextButton", MiscTab)
+rodBtn.Size = UDim2.new(1, 0, 0, 30)
+rodBtn.Text = "🎣 Select Rod"
+rodBtn.BackgroundColor3 = Color3.fromRGB(40,0,80)
+rodBtn.TextColor3 = Color3.fromRGB(255,255,255)
+rodBtn.Font = Enum.Font.GothamBold
+rodBtn.TextSize = 14
+Instance.new("UICorner", rodBtn).CornerRadius = UDim.new(0,6)
 
-local rodDropdown = Instance.new("TextButton", rodRow)
-rodDropdown.Size = UDim2.new(0,175,0,30)
-rodDropdown.Text = selectedRod.." ("..rods[selectedRod].price..")"
-rodDropdown.BackgroundColor3 = Color3.fromRGB(40,0,80)
-rodDropdown.TextColor3 = Color3.fromRGB(255,255,255)
-rodDropdown.Font = Enum.Font.GothamBold
-rodDropdown.TextSize = 14
-Instance.new("UICorner", rodDropdown).CornerRadius = UDim.new(0,6)
+local rodFrame = Instance.new("Frame", MiscTab)
+rodFrame.Size = UDim2.new(1, -20, 0, 120)
+rodFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+rodFrame.Visible = false
+Instance.new("UICorner", rodFrame).CornerRadius = UDim.new(0,6)
 
-local buyRodBtn = Instance.new("TextButton", rodRow)
-buyRodBtn.Size = UDim2.new(0,150,0,30)
-buyRodBtn.Text = "🛒 Buy Rod"
-buyRodBtn.BackgroundColor3 = Color3.fromRGB(80,0,120)
-buyRodBtn.TextColor3 = Color3.fromRGB(255,255,255)
-buyRodBtn.Font = Enum.Font.GothamBold
-buyRodBtn.TextSize = 14
-Instance.new("UICorner", buyRodBtn).CornerRadius = UDim.new(0,6)
-buyRodBtn.Visible = false
+local rodScroll = Instance.new("ScrollingFrame", rodFrame)
+rodScroll.Size = UDim2.new(1, 0, 1, 0)
+rodScroll.CanvasSize = UDim2.new(0,0,0,0)
+rodScroll.ScrollBarThickness = 4
+rodScroll.BackgroundTransparency = 1
 
-local rodPopup
-rodDropdown.MouseButton1Click:Connect(function()
-    if rodPopup then
-        rodPopup:Destroy()
-        rodPopup = nil
-    else
-        local rodNames = {}
-        for name,_ in pairs(rods) do table.insert(rodNames, name) end
-        rodPopup = createPopup(rodNames, function(selected)
-            selectedRod = selected
-            rodDropdown.Text = selected.." ("..rods[selected].price..")"
-            buyRodBtn.Visible = true
+local rodLayout = Instance.new("UIListLayout", rodScroll)
+rodLayout.Padding = UDim.new(0,3)
+
+local function refreshRodList()
+    for _, c in ipairs(rodScroll:GetChildren()) do
+        if c:IsA("TextButton") then c:Destroy() end
+    end
+    local count = 0
+    for name, data in pairs(rods) do
+        count += 1
+        local btn = Instance.new("TextButton", rodScroll)
+        btn.Size = UDim2.new(1, -5, 0, 25)
+        btn.Text = name .. " (" .. data.price .. ")"
+        btn.BackgroundColor3 = Color3.fromRGB(60,0,100)
+        btn.TextColor3 = Color3.fromRGB(255,255,255)
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = 13
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0,4)
+
+        btn.MouseButton1Click:Connect(function()
+            local rodRemote = net:WaitForChild("RF/PurchaseFishingRod")
+            pcall(function() rodRemote:InvokeServer(data.id) end)
         end)
-        rodPopup.LayoutOrder = rodRow.LayoutOrder + 0.1
-        rodPopup.Parent = miscContainer
     end
+    rodScroll.CanvasSize = UDim2.new(0,0,0,count*28)
+end
+
+rodBtn.MouseButton1Click:Connect(function()
+    rodFrame.Visible = not rodFrame.Visible
+    if rodFrame.Visible then refreshRodList() end
 end)
 
-buyRodBtn.MouseButton1Click:Connect(function()
-    local rodData = rods[selectedRod]
-    if rodData then
-        local rodRemote = net:WaitForChild("RF/PurchaseFishingRod")
-        pcall(function() rodRemote:InvokeServer(rodData.id) end)
-    end
-end)
-
--- =============================
+-- =========================================================
 -- Bait Shop
--- =============================
+-- =========================================================
 local baits = {
     ["TopWater Bait (100 Coins)"] = 10,
     ["Lucky Bait (1k Coins)"]     = 2,
@@ -961,64 +909,63 @@ local baits = {
     ["Aether Bait (3.7M)"]        = 16,
 }
 
-local selectedBait = "TopWater Bait (100 Coins)"
-local baitRow = Instance.new("Frame", miscContainer)
-baitRow.Size = UDim2.new(1, 0, 0, 30)
-baitRow.BackgroundTransparency = 1
-baitRow.LayoutOrder = 2
-local baitLayout = Instance.new("UIListLayout", baitRow)
-baitLayout.FillDirection = Enum.FillDirection.Horizontal
-baitLayout.Padding = UDim.new(0, 10)
+local baitBtn = Instance.new("TextButton", MiscTab)
+baitBtn.Size = UDim2.new(1, 0, 0, 30)
+baitBtn.Text = "🪱 Select Bait"
+baitBtn.BackgroundColor3 = Color3.fromRGB(40,0,80)
+baitBtn.TextColor3 = Color3.fromRGB(255,255,255)
+baitBtn.Font = Enum.Font.GothamBold
+baitBtn.TextSize = 14
+Instance.new("UICorner", baitBtn).CornerRadius = UDim.new(0,6)
 
-local baitDropdown = Instance.new("TextButton", baitRow)
-baitDropdown.Size = UDim2.new(0,175,0,30)
-baitDropdown.Text = selectedBait
-baitDropdown.BackgroundColor3 = Color3.fromRGB(40,0,80)
-baitDropdown.TextColor3 = Color3.fromRGB(255,255,255)
-baitDropdown.Font = Enum.Font.GothamBold
-baitDropdown.TextSize = 14
-Instance.new("UICorner", baitDropdown).CornerRadius = UDim.new(0,6)
+local baitFrame = Instance.new("Frame", MiscTab)
+baitFrame.Size = UDim2.new(1, -20, 0, 120)
+baitFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+baitFrame.Visible = false
+Instance.new("UICorner", baitFrame).CornerRadius = UDim.new(0,6)
 
-local buyBaitBtn = Instance.new("TextButton", baitRow)
-buyBaitBtn.Size = UDim2.new(0,150,0,30)
-buyBaitBtn.Text = "🛒 Buy Bait"
-buyBaitBtn.BackgroundColor3 = Color3.fromRGB(80,0,120)
-buyBaitBtn.TextColor3 = Color3.fromRGB(255,255,255)
-buyBaitBtn.Font = Enum.Font.GothamBold
-buyBaitBtn.TextSize = 14
-Instance.new("UICorner", buyBaitBtn).CornerRadius = UDim.new(0,6)
-buyBaitBtn.Visible = false
+local baitScroll = Instance.new("ScrollingFrame", baitFrame)
+baitScroll.Size = UDim2.new(1, 0, 1, 0)
+baitScroll.CanvasSize = UDim2.new(0,0,0,0)
+baitScroll.ScrollBarThickness = 4
+baitScroll.BackgroundTransparency = 1
 
-local baitPopup
-baitDropdown.MouseButton1Click:Connect(function()
-    if baitPopup then
-        baitPopup:Destroy()
-        baitPopup = nil
-    else
-        local baitNames = {}
-        for name,_ in pairs(baits) do table.insert(baitNames, name) end
-        baitPopup = createPopup(baitNames, function(selected)
-            selectedBait = selected
-            baitDropdown.Text = selected
-            buyBaitBtn.Visible = true
+local baitLayout = Instance.new("UIListLayout", baitScroll)
+baitLayout.Padding = UDim.new(0,3)
+
+local function refreshBaitList()
+    for _, c in ipairs(baitScroll:GetChildren()) do
+        if c:IsA("TextButton") then c:Destroy() end
+    end
+    local count = 0
+    for name, id in pairs(baits) do
+        count += 1
+        local btn = Instance.new("TextButton", baitScroll)
+        btn.Size = UDim2.new(1, -5, 0, 25)
+        btn.Text = name
+        btn.BackgroundColor3 = Color3.fromRGB(60,0,100)
+        btn.TextColor3 = Color3.fromRGB(255,255,255)
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = 13
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0,4)
+
+        btn.MouseButton1Click:Connect(function()
+            local RFPurchaseBait = net:WaitForChild("RF/PurchaseBait")
+            pcall(function() RFPurchaseBait:InvokeServer(id) end)
         end)
-        baitPopup.LayoutOrder = baitRow.LayoutOrder + 0.1
-        baitPopup.Parent = miscContainer
     end
-end)
+    baitScroll.CanvasSize = UDim2.new(0,0,0,count*28)
+end
 
-buyBaitBtn.MouseButton1Click:Connect(function()
-    if baits[selectedBait] then
-        local RFPurchaseBait = net:WaitForChild("RF/PurchaseBait")
-        pcall(function() RFPurchaseBait:InvokeServer(baits[selectedBait]) end)
-    end
+baitBtn.MouseButton1Click:Connect(function()
+    baitFrame.Visible = not baitFrame.Visible
+    if baitFrame.Visible then refreshBaitList() end
 end)
 
 
--- ========================================
--- Player Teleport 
--- ========================================
-
+-- =========================================================
+-- Teleport to Player
+-- =========================================================
 local LocalPlayer = game.Players.LocalPlayer
 local Players = game:GetService("Players")
 
@@ -1033,8 +980,7 @@ local function teleportToPlayerExact(username)
         end
     end
 end
-
-local playerDropdownBtn = Instance.new("TextButton", miscContainer)
+local playerDropdownBtn = Instance.new("TextButton", MiscTab)
 playerDropdownBtn.Size = UDim2.new(1, 0, 0, 30)
 playerDropdownBtn.Text = "🌀 Teleport to Player"
 playerDropdownBtn.BackgroundColor3 = Color3.fromRGB(40,0,80) 
@@ -1043,8 +989,8 @@ playerDropdownBtn.Font = Enum.Font.GothamBold
 playerDropdownBtn.TextSize = 14
 Instance.new("UICorner", playerDropdownBtn).CornerRadius = UDim.new(0,6)
 
-local popupFrame = Instance.new("Frame", miscContainer)
-popupFrame.Size = UDim2.new(1, -10, 0, 120)
+local popupFrame = Instance.new("Frame", MiscTab)
+popupFrame.Size = UDim2.new(1, -20, 0, 120)
 popupFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
 popupFrame.Visible = false
 Instance.new("UICorner", popupFrame).CornerRadius = UDim.new(0,6)
@@ -1062,7 +1008,6 @@ local function refreshPlayerList()
     for _, child in ipairs(scrolling:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
     end
-
     local count = 0
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= LocalPlayer then
@@ -1082,26 +1027,20 @@ local function refreshPlayerList()
             end)
         end
     end
-
     scrolling.CanvasSize = UDim2.new(0,0,0,count * 28)
 end
 
 playerDropdownBtn.MouseButton1Click:Connect(function()
     popupFrame.Visible = not popupFrame.Visible
-    if popupFrame.Visible then
-        refreshPlayerList()
-    end
+    if popupFrame.Visible then refreshPlayerList() end
 end)
-
 Players.PlayerAdded:Connect(refreshPlayerList)
 Players.PlayerRemoving:Connect(refreshPlayerList)
 
-
--- =============================
+-- =========================================================
 -- Grinding Toggle
--- =============================
-local grindingBtn = Instance.new("TextButton", miscContainer)
-grindingBtn.LayoutOrder = 4
+-- =========================================================
+local grindingBtn = Instance.new("TextButton", MiscTab)
 grindingBtn.Size = UDim2.new(1, 0, 0, 30)
 grindingBtn.Text = "🎣 Grinding: OFF"
 grindingBtn.BackgroundColor3 = Color3.fromRGB(80,0,120)
@@ -1122,11 +1061,12 @@ grindingBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-
-local bottomSpacer = Instance.new("Frame", miscContainer)
-bottomSpacer.Size = UDim2.new(1, 0, 0, 60)
+local bottomSpacer = Instance.new("Frame", MiscTab)
+bottomSpacer.Size = UDim2.new(1, 0, 0, 40)
 bottomSpacer.BackgroundTransparency = 1
 bottomSpacer.LayoutOrder = 999
+
+
 -- =========================================================
 -- MINIMIZE & CLOSE
 -- =========================================================
@@ -1161,4 +1101,11 @@ end)
 closeBtn.MouseButton1Click:Connect(function()
     gui:Destroy()
     autofish = false
+end)
+
+local VirtualUser = game:GetService("VirtualUser")
+
+game:GetService("Players").LocalPlayer.Idled:Connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
 end)
