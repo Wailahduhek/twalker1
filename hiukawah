@@ -1,11 +1,10 @@
--- GRINDING
-
--- // Services
+local autofish = false
+local perfectCast = true
+local catchCount = 0
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
--- // Remotes
 local net = ReplicatedStorage:WaitForChild("Packages")
     :WaitForChild("_Index")
     :WaitForChild("sleitnick_net@0.2.0")
@@ -26,8 +25,8 @@ gui.Name = "AutoFishUI"
 gui.ResetOnSpawn = false
 
 local mainFrame = Instance.new("Frame", gui)
-mainFrame.Size = UDim2.new(0, 360, 0, 240)
-mainFrame.Position = UDim2.new(0.5, -180, 0.5, -120)
+mainFrame.Size = UDim2.new(0, 360, 0, 240)  
+mainFrame.Position = UDim2.new(0.5, -180, 0, 100) 
 mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 mainFrame.BackgroundTransparency = 0.2
 mainFrame.BorderSizePixel = 0
@@ -47,19 +46,21 @@ gradient.Rotation = 45
 
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 12)
 
+
 -- =========================================================
 -- HEADER
 -- =========================================================
 local header = Instance.new("Frame", mainFrame)
-header.Size = UDim2.new(1, 0, 0, 30)
+header.Size = UDim2.new(1, -10, 0, 30)
+header.Position = UDim2.new(0, 5, 0, 5)
 header.BackgroundTransparency = 1
 
 local title = Instance.new("TextLabel", header)
-title.Size = UDim2.new(1, -80, 1, 0)
-title.Position = UDim2.new(0, 10, 0, 0)
-title.Text = "Tole Walker 2.0"
+title.Size = UDim2.new(1, -90, 1, 0)
+title.Position = UDim2.new(0, 10, 0, 0) 
+title.Text = "T-Walker 3.0"
 title.TextColor3 = Color3.fromRGB(200, 200, 255)
-title.TextXAlignment = Enum.TextXAlignment.Left
+title.TextXAlignment = Enum.TextXAlignment.Left 
 title.BackgroundTransparency = 1
 title.Font = Enum.Font.GothamBold
 title.TextSize = 16
@@ -84,78 +85,147 @@ Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(1, 0)
 -- TAB SYSTEM
 -- =========================================================
 local tabBar = Instance.new("Frame", mainFrame)
-tabBar.Size = UDim2.new(1, -20, 0, 30)
-tabBar.Position = UDim2.new(0, 10, 0, 35)
+tabBar.Size = UDim2.new(0, 100, 1, -50)
+tabBar.Position = UDim2.new(0, 5, 0, 35)
 tabBar.BackgroundTransparency = 1
+tabBar.Visible = true 
 
 local tabs, contents = {}, {}
 
 local function createTab(name, emoji, order)
     local btn = Instance.new("TextButton", tabBar)
-    btn.Size = UDim2.new(0.25, -5, 1, 0)
-    btn.Position = UDim2.new(0.25 * (order - 1), (order == 1 and 0 or 5), 0, 0)
+    btn.Size = UDim2.new(1, 0, 0, 30)
+    btn.Position = UDim2.new(0, 0, 0, (order - 1) * 35)
     btn.Text = emoji .. " " .. name
-    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Font = Enum.Font.GothamBold
     btn.TextSize = 14
-    btn.BackgroundColor3 = Color3.fromRGB(40,0,80)
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 0, 80)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
 
     local frame = Instance.new("ScrollingFrame", mainFrame)
-    frame.Size = UDim2.new(1, -20, 1, -80)
-    frame.Position = UDim2.new(0, 10, 0, 70)
+    frame.Size = UDim2.new(1, -120, 1, -40)
+    frame.Position = UDim2.new(0, 110, 0, 35)
     frame.BackgroundTransparency = 1
     frame.Visible = false
     frame.BorderSizePixel = 0
     frame.ScrollBarThickness = 6
     frame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    frame.CanvasSize = UDim2.new(0,0,0,0)
-
-    local layout = Instance.new("UIListLayout", frame)
-    layout.Padding = UDim.new(0, 5)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
 
     tabs[name] = btn
     contents[name] = frame
 end
 
-
 createTab("AutoFish", "", 1)
 createTab("Teleport", "", 2)
 createTab("Settings", "", 3)
 createTab("Misc", "", 4)
+createTab("Trade", "", 5)
+createTab("Webhook", "", 6)
 
 local function switchTab(name)
-    for n,f in pairs(contents) do
+    for n, f in pairs(contents) do
         f.Visible = (n == name)
+        if tabs[n] then
+            tabs[n].BackgroundColor3 = f.Visible and Color3.fromRGB(80, 0, 150) or Color3.fromRGB(40, 0, 80)
+        end
     end
 end
+
 switchTab("AutoFish")
 
-for name,btn in pairs(tabs) do
-    btn.MouseButton1Click:Connect(function() switchTab(name) end)
-end
-
-local tabLineTop = Instance.new("Frame", mainFrame)
-tabLineTop.Size = UDim2.new(1, -20, 0, 2)
-tabLineTop.Position = UDim2.new(0, 10, 0, tabBar.Position.Y.Offset - 2)
-tabLineTop.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-tabLineTop.BorderSizePixel = 0
-
-local tabLineBottom = Instance.new("Frame", mainFrame)
-tabLineBottom.Size = UDim2.new(1, -20, 0, 2)
-tabLineBottom.Position = UDim2.new(0, 10, 0, tabBar.Position.Y.Offset + tabBar.Size.Y.Offset + 2)
-tabLineBottom.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-tabLineBottom.BorderSizePixel = 0
-
-local function updateLines()
-    tabLineTop.Position = UDim2.new(0, 10, 0, tabBar.Position.Y.Offset - 2)
-    tabLineBottom.Position = UDim2.new(0, 10, 0, tabBar.Position.Y.Offset + tabBar.Size.Y.Offset + 2)
+for name, btn in pairs(tabs) do
+    btn.MouseButton1Click:Connect(function()
+        switchTab(name)
+    end)
 end
 
 tabBar:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateLines)
 tabBar:GetPropertyChangedSignal("Position"):Connect(updateLines)
 
+-- =========================================================
+-- MINIMIZE & CLOSE 
+-- =========================================================
+local minimized = false
+local restoreButton = Instance.new("TextButton", mainFrame)
+restoreButton.Size = UDim2.new(1, 0, 1, 0)
+restoreButton.Position = UDim2.new(0, 0, 0, 0)
+restoreButton.BackgroundTransparency = 1
+restoreButton.Text = ""
+restoreButton.Visible = false
+
+minimizeBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+
+    if minimized then
+        tabBar.Visible = false
+        for _, f in pairs(contents) do
+            f.Visible = false
+        end
+
+        mainFrame.Size = UDim2.new(0, 200, 0, 40)
+        mainFrame.Position = UDim2.new(0.5, -100, 0, 10)
+
+        minimizeBtn.Visible = false
+        closeBtn.Visible = false
+
+        title.AnchorPoint = Vector2.new(0.5, 0.5)
+        title.Position = UDim2.new(0.5, 0, 0.5, 0)
+        title.Size = UDim2.new(1, -40, 1, 0)
+        title.TextXAlignment = Enum.TextXAlignment.Center
+
+        restoreButton.Visible = true
+    else
+        tabBar.Visible = true
+        minimizeBtn.Visible = true
+        closeBtn.Visible = true
+        restoreButton.Visible = false
+
+        mainFrame.Size = UDim2.new(0, 360, 0, 240)
+        mainFrame.Position = UDim2.new(0.5, -180, 0, 100)
+        switchTab("AutoFish")
+
+        title.AnchorPoint = Vector2.new(0, 0)
+        title.Position = UDim2.new(0, 10, 0, 0)
+        title.Size = UDim2.new(1, -90, 1, 0)
+        title.Text = "T-Walker 3.0"
+        title.TextColor3 = Color3.fromRGB(200, 200, 255)
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        title.BackgroundTransparency = 1
+        title.Font = Enum.Font.GothamBold
+        title.TextSize = 16
+    end
+end)
+
+restoreButton.MouseButton1Click:Connect(function()
+    if minimized then
+        minimized = false
+
+        tabBar.Visible = true
+        minimizeBtn.Visible = true
+        closeBtn.Visible = true
+        restoreButton.Visible = false
+
+        mainFrame.Size = UDim2.new(0, 360, 0, 240)
+        mainFrame.Position = UDim2.new(0.5, -180, 0, 100)
+        switchTab("AutoFish")
+
+        title.AnchorPoint = Vector2.new(0, 0)
+        title.Position = UDim2.new(0, 10, 0, 0)
+        title.Size = UDim2.new(1, -90, 1, 0)
+        title.Text = "T-Walker 3.0"
+        title.TextColor3 = Color3.fromRGB(200, 200, 255)
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        title.BackgroundTransparency = 1
+        title.Font = Enum.Font.GothamBold
+        title.TextSize = 16
+    end
+end)
+
+closeBtn.MouseButton1Click:Connect(function()
+    gui:Destroy()
+    autofish = false
+end)
 
 -- =========================================================
 -- AUTO FISH LOGIC
@@ -164,13 +234,7 @@ tabBar:GetPropertyChangedSignal("Position"):Connect(updateLines)
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
-local RodIdle = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Animations"):WaitForChild("FishingRodReelIdle")
-local RodReel = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Animations"):WaitForChild("EasyFishReelStart")
-local RodShake = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Animations"):WaitForChild("CastFromFullChargePosition1Hand")
 local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
-local RodShake = animator:LoadAnimation(RodShake)
-local RodIdle = animator:LoadAnimation(RodIdle)
-local RodReel = animator:LoadAnimation(RodReel)
 
 local function stopAll()
     for _, t in pairs(animator:GetPlayingAnimationTracks()) do
@@ -186,44 +250,32 @@ local function playAnimation(animId)
     return track
 end
 
-local function sellAllFish()
+
+local function sellAllFish(statusLabel)
     local net = game:GetService("ReplicatedStorage"):WaitForChild("Packages")
-        :WaitForChild("_Index"):WaitForChild("sleitnick_net@0.2.0"):WaitForChild("net")
+        :WaitForChild("_Index")
+        :WaitForChild("sleitnick_net@0.2.0")
+        :WaitForChild("net")
     local sellRemote = net:WaitForChild("RF/SellAllItems")
+
+    statusLabel.Text = "Status: 💰 Selling..."
+    statusLabel.TextColor3 = Color3.fromRGB(255, 220, 100)
+
     pcall(function()
         sellRemote:InvokeServer()
-        updateAutoWeatherLabel("✅ Items Sold!", 2)
     end)
 
-    task.wait(1)
+    task.wait(1) 
+    statusLabel.Text = "Status: ✔ Running"
+    statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
 end
 
 
-local perfectCast = true
-local Replion = require(ReplicatedStorage.Packages.Replion)
-
-local clientData = Replion.Client:WaitReplion("Data")
-
-local function getCoins()
-    local data = clientData:Get()
-    return data.Coins or 0
-end
-
-local function getFishCaught()
-    local data = clientData:Get()
-    return (data.Statistics and data.Statistics.FishCaught) or 0
-end
-
-
-local autofish = false
-local catchCount = 0
-local finishDelay = 1
-
--- Remote Equip
-local Players = game:GetService("Players")
-local ReplStorage = game:GetService("ReplicatedStorage")
+local priority = {258,169,168,126,5,80,1}
+local Players = game:GetService("Players") 
+local ReplStorage = game:GetService("ReplicatedStorage") 
 local player = Players.LocalPlayer
-local Replion = require(ReplStorage.Packages.Replion)
+local Replion = require(ReplStorage.Packages.Replion) 
 local ClientData = Replion.Client:WaitReplion("Data")
 
 local remote = ReplStorage:WaitForChild("Packages")
@@ -232,142 +284,277 @@ local remote = ReplStorage:WaitForChild("Packages")
     :WaitForChild("net")
     :WaitForChild("RE/EquipItem")
 
-local function getRodUUID(rodId)
-    local items = ClientData.Data.Items or ClientData.Data.Inventory or {}
-    local rods = items["Fishing Rods"] or {}
-    for _, rod in pairs(rods) do
-        if rod.Id == rodId then
-            return rod.UUID
+
+local function getCoin()
+    local data = ClientData:Get()
+    return data.Coins or 0
+end
+
+local function getFishingRods()
+    local timeout = tick() + 5 
+    local rods = {}
+    
+    while tick() < timeout do
+        local items = ClientData.Data.Items or ClientData.Data.Inventory or {}
+        rods = items["Fishing Rods"] or {}
+        
+        if next(rods) ~= nil then
+            break 
+        end
+        task.wait(0.5) 
+    end
+    
+    return rods
+end
+
+local function getBestRodUUID()
+    task.wait(0.5)
+    local rods = getFishingRods() 
+    for _, rodId in ipairs(priority) do
+        for _, rod in pairs(rods) do
+            if rod.Id == rodId then
+                return rod.UUID
+            end
         end
     end
     return nil
 end
 
-
-local function buyRodU(rodId)
-    local rodData = {id = rodId} 
-    local purchaseRemote = net:WaitForChild("RF/PurchaseFishingRod")
-
-    pcall(function()
-        purchaseRemote:InvokeServer(rodData.id)
-    end)
-
-    task.wait(1)
-
-    local rodUUID = getRodUUID(rodId)
-    if rodUUID then
-        remote:FireServer(rodUUID, "Fishing Rods")
-        print("✅ Bought & Equipped rod ID " .. rodId)
+local function EquipBestFishingRod()
+    local uuid = getBestRodUUID() 
+    if uuid then
+        local success, err = pcall(function()
+            remote:FireServer(uuid, "Fishing Rods")
+        end)
+        if success then
+            print("✅ Best rod equipped! UUID:", uuid)
+        else
+            warn("❌ Failed to equip rod:", err)
+        end
     else
-        warn("⚠️ Gagal equip rod ID " .. rodId .. " setelah beli")
+        warn("⚠️ No rod found in inventory according to priority!")
+    end
+end
+
+local stopping = false
+
+local function startFishing(statusLabel)
+    if autofish then return end
+    autofish = true
+    stopping = false
+    statusLabel.Text = "Status: ✔ Running"
+    statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
+
+    task.spawn(function()
+        EquipBestFishingRod()
+        task.wait(3)
+
+        equipRemote:FireServer(1)
+        task.wait(1)
+
+        while autofish do
+            local timestamp = perfectCast and 9999999999 or (tick() + math.random())
+            rodRemote:InvokeServer(timestamp)
+            task.wait(0.1)
+            local reelTrack = playAnimation("rbxassetid://134965425664034")
+            miniGameRemote:InvokeServer(-1.238, 0.969)
+            task.wait(0.3)
+
+            local finished = false
+            local baitConn = baitRemote.OnClientEvent:Connect(function() end)
+            local fishConn = fishRemote.OnClientEvent:Connect(function()
+                finished = true
+                catchCount += 1
+                statusLabel.Text = "Status: Catch " .. catchCount
+                finishRemote:FireServer()
+            end)
+
+            local timeout = tick() + 5
+            while not finished and autofish and tick() < timeout do
+                finishRemote:FireServer()
+                task.wait(0.1)
+            end
+
+            baitConn:Disconnect()
+            fishConn:Disconnect()
+            reelTrack:Stop()
+
+            if not finished then
+                warn("⚠️ Timeout, restart cycle")
+            end
+
+            if catchCount >= 1000 then
+                sellAllFish(statusLabel)
+                catchCount = 0
+            end
+
+            if stopping then
+                autofish = false
+                statusLabel.Text = "Status: ✖ Not Running"
+                statusLabel.TextColor3 = Color3.fromRGB(255, 120, 120)
+                break
+            end
+
+            task.wait(0.2)
+        end
+    end)
+end
+
+local function stopFishing(statusLabel)
+    if autofish then
+        stopping = true
+        statusLabel.Text = "Status: ⏳ Stopping..."
+        statusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+    else
+        statusLabel.Text = "Status: ✖ Not Running"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 120, 120)
     end
 end
 
 
-local autofish = false
-local catchCount = 0
-local finishDelay = 1
+local rodPrices = {
+    [80]  = 51000,     
+    [5]   = 1100000,   
+    [126] = 3100000,   
+    [168] = 8100000,
+}
 
-local function hasRod(rodId)
-    return getRodUUID(rodId) ~= nil
+local currentRod = nil
+
+local function getRodUUIDFromInventory(rodId)
+    local rodsInventory = getFishingRods()
+    for _, rod in pairs(rodsInventory) do
+        if rod.Id == rodId then
+            return rod.UUID or rod.Id
+        end
+    end
+    return nil
 end
 
--- =========================================================
--- Equip Best Rod
--- =========================================================
-local function equipBestOwnedRod()
-    local priority = {169,168, 126, 5, 80, 1}
+local function buyOrEquipRod(rodId)
+    local purchaseRemote = net:WaitForChild("RF/PurchaseFishingRod")
+
+    local rodUUID = getRodUUIDFromInventory(rodId)
+    if rodUUID then
+        if currentRod ~= rodId then
+            remote:FireServer(rodUUID, "Fishing Rods")
+            currentRod = rodId
+            print("✅ Equipped rod ID " .. rodId)
+        else
+            print("ℹ️ Rod ID " .. rodId .. " sudah equipped")
+        end
+        return true
+    end
+
+    local success, err = pcall(function()
+        purchaseRemote:InvokeServer(rodId)
+    end)
+
+    if not success then
+        warn("⚠️ Failed to buy rod ID " .. rodId, err)
+        return false
+    end
+
+    task.wait(1)
+
+    rodUUID = getRodUUIDFromInventory(rodId)
+    if rodUUID then
+        remote:FireServer(rodUUID, "Fishing Rods")
+        currentRod = rodId
+        print("✅ Bought & Equipped rod ID " .. rodId)
+        return true
+    else
+        warn("⚠️ Gagal beli rod ID " .. rodId)
+        return false
+    end
+end
+
+local function AutoBuyRodPriority(money)
     for _, rodId in ipairs(priority) do
-        if hasRod(rodId) then
-            local rodUUID = getRodUUID(rodId)
-            if rodUUID then
-                remote:FireServer(rodUUID, "Fishing Rods")
-                currentRod = rodId
-                print("🎣 Start with best owned rod ID " .. rodId)
-                pcall(function()
-                    equipRemote:FireServer(1)
-                    task.wait(1)
-                end)
+        local rodUUID = getRodUUIDFromInventory(rodId)
+        if rodUUID then
+            buyOrEquipRod(rodId)
+            return
+        else
+            local price = rodPrices[rodId]
+            if price and money >= price then
+                buyOrEquipRod(rodId)
                 return
             end
         end
     end
 end
 
-local function startFishing(statusLabel)
-    if autofish then return end
+-- =========================================================
+-- GRINDING FUNCTION
+-- =========================================================
+function grinding(statusLabel)
+    if autofish then
+        stopping = true
+        return
+    end
+
     autofish = true
+    stopping = false
     statusLabel.Text = "Status: ✔ Running"
     statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
 
-    local lastFish = getFishCaught()
-
     task.spawn(function()
-        pcall(function()
-            equipBestOwnedRod()
-            task.wait(1)
+        EquipBestFishingRod()
+        task.wait(1)
+        equipRemote:FireServer(1)
+        task.wait(1)
+        while autofish do
+            local timestamp = perfectCast and 9999999999 or (tick() + math.random())
+            rodRemote:InvokeServer(timestamp)
+            task.wait(0.1)
+            local reelTrack = playAnimation("rbxassetid://134965425664034")
+            miniGameRemote:InvokeServer(-1.238, 0.969)
+            task.wait(0.3)
 
-            while autofish do
-                pcall(function()
-                    local timestamp = perfectCast and 9999999999 or (tick() + math.random())
-                    local reelTrack = playAnimation("rbxassetid://134965425664034")
-                    RodShake:Play()
-                    reelTrack:Play()
-                    rodRemote:InvokeServer(timestamp)
-                    task.wait(0.1)
-                    reelTrack:Play()
-                    miniGameRemote:InvokeServer(-1.238,0.969)
-                    task.wait(0.3)
+            local finished = false
+            local baitConn = baitRemote.OnClientEvent:Connect(function() end)
+            local fishConn = fishRemote.OnClientEvent:Connect(function()
+                finished = true
+                catchCount = catchCount + 1
+                statusLabel.Text = "Status: Grinding " .. catchCount
+                finishRemote:FireServer()
+            end)
 
-                    local baitConn = baitRemote.OnClientEvent:Connect(function() end)
-                    local fishConn = fishRemote.OnClientEvent:Connect(function() end)
-                    task.wait(finishDelay)
-
-                    finishRemote:FireServer()
-                    baitConn:Disconnect()
-                    fishConn:Disconnect()
-
-
-                    local currentFish = getFishCaught()
-                    local attempts, maxAttempts = 0, 50
-                    while currentFish <= lastFish and attempts < maxAttempts do
-                        finishRemote:FireServer()
-                        task.wait(0.1)
-                        currentFish = getFishCaught()
-                        attempts = attempts + 1
-                    end
-
-                    if attempts >= maxAttempts then
-                        warn("skip cycle")
-                    end
-
-                    reelTrack:Stop()
-                    lastFish = currentFish
-                    catchCount += 1
-
-                    local currentCoins = getCoins()
-                    statusLabel.Text = "Status: Catch " .. catchCount
-                    statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
-
-                    if catchCount >= 1000 then
-                        sellAllFish()
-                        task.wait(5)
-                        catchCount = 0
-                    end
-                end)
-                task.wait(0.5)
+            local timeout = tick() + 5
+            while not finished and autofish and tick() < timeout do
+                finishRemote:FireServer()
+                task.wait(0.1)
             end
-        end)
+
+            baitConn:Disconnect()
+            fishConn:Disconnect()
+            reelTrack:Stop()
+
+            if not finished then
+                warn("⚠️ Timeout, restart cycle")
+            end
+
+
+            if catchCount >= 50 then
+                sellAllFish(statusLabel)
+                catchCount = 0
+            end
+
+            local money = getCoin()
+            AutoBuyRodPriority(money)
+
+            if stopping then
+                autofish = false
+                statusLabel.Text = "Status: ✖ Stopped"
+                statusLabel.TextColor3 = Color3.fromRGB(255, 120, 120)
+                break
+            end
+
+            task.wait(0.2)
+        end
     end)
 end
-
-
-local function stopFishing(statusLabel)
-    autofish = false
-    statusLabel.Text = "Status: X Not Running"
-    statusLabel.TextColor3 = Color3.fromRGB(255, 120, 120)
-end
-
 
 -- =========================================================
 -- AUTO FISH TAB UI
@@ -404,10 +591,19 @@ createButton("X Stop Fishing", 80, function()
     stopFishing(statusLabel)
 end, autoTab)
 
+createButton("Auto Grinding ON/OFF", 120, function()
+    if autofish then
+        stopping = true
+        statusLabel.Text = "Status: ⏳ Stopping..."
+        statusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+    else
+        grinding(statusLabel)
+    end
+end, autoTab)
+
 -- =========================================================
--- OTHER TABS
+-- OTHER TABS TELEPORT
 -- =========================================================
--- Teleport
 local tpTab = contents["Teleport"]
 local tpLabel = Instance.new("TextLabel", tpTab)
 tpLabel.Size = UDim2.new(1,0,0,25)
@@ -418,7 +614,7 @@ tpLabel.BackgroundTransparency = 1
 tpLabel.Font = Enum.Font.Gotham
 tpLabel.TextSize = 14
 
-teleportCoral = {
+local teleportCoral = {
     {pos = Vector3.new(-2947.46, 2.75, 2110.76), lookDir = Vector3.new(0.16, -0.00, -0.99)},
     {pos = Vector3.new(-2937.30, 2.75, 2111.35), lookDir = Vector3.new(0.00, 0.00, -1.00)},
     {pos = Vector3.new(-2974.28, 2.87, 2090.02), lookDir = Vector3.new(0.99, -0.00, -0.17)},
@@ -500,39 +696,56 @@ local teleportTropical = {
     {pos = Vector3.new(-1957.6, 25.4, 3755.6), lookDir = Vector3.new(0.96, 0.00, -0.27)},
 }
 
-local teleportEv = {
-    {pos = Vector3.new(-1188.7, 9.5, 3595.5), lookDir = Vector3.new(0.54, 0.00, 0.84)},
-
+local teleportJungle = {
+    {pos = Vector3.new(1480.2, 3.8, -335.3), lookDir = Vector3.new(0.74, 0.00, 0.67)},
+    {pos = Vector3.new(1544.6, 3.1, -415.9), lookDir = Vector3.new(0.72, 0.00, -0.70)},
 }
-createButton("Coral Reefs", 40, function()
+
+local teleportUnderGround = {
+    {pos = Vector3.new(2159.0, -91.3, -727.2), lookDir = Vector3.new(-0.94, 0.00, 0.35)},
+    {pos = Vector3.new(2140.7, -91.2, -698.7), lookDir = Vector3.new(-0.01, -0.00, -1.00)},
+}
+
+local teleportSecretTemple = {
+    {pos = Vector3.new(1452.2, -22.1, -622.2), lookDir = Vector3.new(0.22, 0.00, 0.98)},
+    {pos = Vector3.new(1506.3, -22.1, -628.1), lookDir = Vector3.new(0.15, 0.00, 0.99)},
+    {pos = Vector3.new(1503.4, -22.1, -640.7), lookDir = Vector3.new(-0.12, -0.00, -0.99)},
+    {pos = Vector3.new(1447.5, -22.1, -635.3), lookDir = Vector3.new(-0.19, -0.00, -0.98)},
+}
+local teleportMerchant = {
+    {pos = Vector3.new(-131.0, 2.4, 2765.6), lookDir = Vector3.new(0.54, -0.00, -0.84)},
+}
+
+
+createButton("Ancient Jungle", 40, function()
     local plr = game.Players.LocalPlayer
-    local spot = teleportCoral[math.random(1, #teleportCoral)]
+    local spot = teleportJungle[math.random(1, #teleportJungle)]
     plr.Character:SetPrimaryPartCFrame(CFrame.new(
         spot.pos,
         spot.pos + spot.lookDir
     ))
 end, tpTab)
 
-createButton("Ocean", 80, function()
+createButton("Underground", 80, function()
+    local plr = game.Players.LocalPlayer
+    local spot = teleportUnderGround[math.random(1, #teleportUnderGround)]
+    plr.Character:SetPrimaryPartCFrame(CFrame.new(
+        spot.pos,
+        spot.pos + spot.lookDir
+    ))
+end, tpTab)
+
+createButton("Secret Temple", 120, function()
+    local plr = game.Players.LocalPlayer
+    local spot = teleportSecretTemple[math.random(1, #teleportSecretTemple)]
+    plr.Character:SetPrimaryPartCFrame(CFrame.new(
+        spot.pos,
+        spot.pos + spot.lookDir
+    ))
+end, tpTab)
+createButton("Ocean", 160, function()
     local plr = game.Players.LocalPlayer
     local spot = teleportOcean[math.random(1, #teleportOcean)]
-    plr.Character:SetPrimaryPartCFrame(CFrame.new(
-        spot.pos,
-        spot.pos + spot.lookDir
-    ))
-end, tpTab)
-
-createButton("Kohana Volcano", 120, function()
-    local plr = game.Players.LocalPlayer
-    local spot = teleportKohanaV[math.random(1, #teleportKohanaV)]
-    plr.Character:SetPrimaryPartCFrame(CFrame.new(
-        spot.pos,
-        spot.pos + spot.lookDir
-    ))
-end, tpTab)
-createButton("Crater Island", 160, function()
-    local plr = game.Players.LocalPlayer
-    local spot = teleportSpots[math.random(1, #teleportSpots)]
     plr.Character:SetPrimaryPartCFrame(CFrame.new(
         spot.pos,
         spot.pos + spot.lookDir
@@ -591,17 +804,46 @@ createButton("Tropical Island", 400, function()
         spot.pos + spot.lookDir
     ))
 end, tpTab)
-
-createButton("Megalontong", 440, function()
+createButton("Coral Reefs", 440, function()
     local plr = game.Players.LocalPlayer
-    local spot = teleportEv[math.random(1, #teleportEv)]
+    local spot = teleportCoral[math.random(1, #teleportCoral)]
+    plr.Character:SetPrimaryPartCFrame(CFrame.new(
+        spot.pos,
+        spot.pos + spot.lookDir
+    ))
+end, tpTab)
+createButton("Crater Island", 480, function()
+    local plr = game.Players.LocalPlayer
+    local spot = teleportSpots[math.random(1, #teleportSpots)]
     plr.Character:SetPrimaryPartCFrame(CFrame.new(
         spot.pos,
         spot.pos + spot.lookDir
     ))
 end, tpTab)
 
--- Settings Tab
+createButton("Kohana Volcano", 520, function()
+    local plr = game.Players.LocalPlayer
+    local spot = teleportKohanaV[math.random(1, #teleportKohanaV)]
+    plr.Character:SetPrimaryPartCFrame(CFrame.new(
+        spot.pos,
+        spot.pos + spot.lookDir
+    ))
+end, tpTab)
+
+createButton("Merchant Store", 560, function()
+    local plr = game.Players.LocalPlayer
+    local spot = teleportMerchant[math.random(1, #teleportMerchant)]
+    plr.Character:SetPrimaryPartCFrame(CFrame.new(
+        spot.pos,
+        spot.pos + spot.lookDir
+    ))
+end, tpTab)
+
+
+
+-- =========================================================
+-- OTHER TABS SETTINGS
+-- =========================================================
 local setTab = contents["Settings"]
 
 local function createButton(text, posY, callback, parent)
@@ -705,15 +947,11 @@ createButton("Auto Weather", 120, function()
     end
 end, setTab)
 
-
-
-
 -- =========================
--- MISC TAB (Clean)
+-- MISC TAB 
 -- =========================
 local MiscTab = contents["Misc"]
 
--- layout + autosize
 local miscLayout = Instance.new("UIListLayout", MiscTab)
 miscLayout.SortOrder = Enum.SortOrder.LayoutOrder
 miscLayout.Padding = UDim.new(0, 10)
@@ -723,114 +961,6 @@ miscLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     MiscTab.CanvasSize = UDim2.new(0, 0, 0, miscLayout.AbsoluteContentSize.Y + 20)
 end)
 
-
--- =========================================================
--- Auto Buy & Equip Rod
--- =========================================================
-local currentRod = nil
-local function buyOrEquipRod(rodId)
-    local purchaseRemote = net:WaitForChild("RF/PurchaseFishingRod")
-    if currentRod == rodId then return end
-
-    if hasRod(rodId) then
-        local rodUUID = getRodUUID(rodId)
-        if rodUUID then
-            remote:FireServer(rodUUID, "Fishing Rods")
-            currentRod = rodId
-            print("✅ Equipped rod ID " .. rodId)
-        end
-        return
-    end
-
-    pcall(function() purchaseRemote:InvokeServer(rodId) end)
-    task.wait(1)
-
-    local rodUUID = getRodUUID(rodId)
-    if rodUUID then
-        remote:FireServer(rodUUID, "Fishing Rods")
-        currentRod = rodId
-        print("✅ Bought & Equipped rod ID " .. rodId)
-    else
-        warn("⚠️ Gagal beli/equip rod ID " .. rodId)
-    end
-end
-
--- =========================================================
--- Grinding Function
--- =========================================================
-local autofish = false
-local catchCount = 0
-local function grinding(statusLabel)
-    if autofish then return end
-    autofish = true
-    statusLabel.Text = "Status: ✔ Running"
-    statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
-
-    local plr = game.Players.LocalPlayer
-    repeat task.wait() until plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-
-    local lastFish = getFishCaught()
-
-    task.wait(5)
-
-    task.spawn(function()
-        equipBestOwnedRod()
-        task.wait(1)
-        while autofish do
-            local ok, err = pcall(function()
-                local timestamp = perfectCast and 9999999999 or (os.clock() + math.random())
-                local reelTrack = playAnimation("rbxassetid://134965425664034")
-                if RodShake then RodShake:Play() end
-                reelTrack:Play()
-                rodRemote:InvokeServer(timestamp)
-                task.wait(0.1)
-                reelTrack:Play()
-                miniGameRemote:InvokeServer(-1.238,0.969)
-                task.wait(0.3)
-
-                local baitConn = baitRemote.OnClientEvent:Connect(function() end)
-                local fishConn = fishRemote.OnClientEvent:Connect(function() end)
-                task.wait(finishDelay)
-                finishRemote:FireServer()
-                baitConn:Disconnect()
-                fishConn:Disconnect()
-
-                local currentFish = getFishCaught()
-                local attempts, maxAttempts = 0, 50
-                while currentFish <= lastFish and attempts < maxAttempts do
-                    finishRemote:FireServer()
-                    task.wait(0.1)
-                    currentFish = getFishCaught()
-                    attempts = attempts + 1
-                end
-
-                reelTrack:Stop()
-                lastFish = currentFish
-                catchCount = catchCount + 1
-
-                local coins = getCoins()
-                if coins >= 8000000 then
-                    buyOrEquipRod(168)
-                elseif coins >= 3000000 then
-                    buyOrEquipRod(126)
-                elseif coins >= 1000000 then
-                    buyOrEquipRod(5)
-                elseif coins >= 50000 then
-                    buyOrEquipRod(80)
-                end
-
-                statusLabel.Text = "Status: Catch " .. catchCount
-                if catchCount >= 50 then
-                    sellAllFish()
-                    task.wait(5)
-                    catchCount = 0
-                end
-            end)
-            if not ok then warn("Grinding error: ", err) end
-            task.wait(0.5)
-        end
-    end)
-end
 -- =========================================================
 -- Rods Shop
 -- =========================================================
@@ -841,6 +971,7 @@ local rods = {
     ["Astral Rod"] = {id = 5,   price = "1M Coins"},
     ["Ares Rod"]   = {id = 126, price = "3M Coins"},
     ["Angler Rod"] = {id = 168, price = "8M Coins"},
+    ["Midnight Rod"] = {id = 80, price = "50k Coins"},
 }
 
 local rodBtn = Instance.new("TextButton", MiscTab)
@@ -1037,71 +1168,493 @@ end)
 Players.PlayerAdded:Connect(refreshPlayerList)
 Players.PlayerRemoving:Connect(refreshPlayerList)
 
--- =========================================================
--- Grinding Toggle
--- =========================================================
-local grindingBtn = Instance.new("TextButton", MiscTab)
-grindingBtn.Size = UDim2.new(1, 0, 0, 30)
-grindingBtn.Text = "🎣 Grinding: OFF"
-grindingBtn.BackgroundColor3 = Color3.fromRGB(80,0,120)
-grindingBtn.TextColor3 = Color3.fromRGB(255,255,255)
-grindingBtn.Font = Enum.Font.GothamBold
-grindingBtn.TextSize = 14
-Instance.new("UICorner", grindingBtn).CornerRadius = UDim.new(0,6)
-
-local grindingToggle = false
-grindingBtn.MouseButton1Click:Connect(function()
-    grindingToggle = not grindingToggle
-    if grindingToggle then
-        grindingBtn.Text = "🎣 Grinding Astral: ON"
-        grinding(grindingBtn)
-    else
-        grindingBtn.Text = "🎣 Grinding Astral: OFF"
-        autofish = false
-    end
-end)
 
 local bottomSpacer = Instance.new("Frame", MiscTab)
 bottomSpacer.Size = UDim2.new(1, 0, 0, 40)
 bottomSpacer.BackgroundTransparency = 1
 bottomSpacer.LayoutOrder = 999
 
+-- =========================================================
+-- TRADE TAB CONTENT
+-- =========================================================
+local tradeFrame = contents["Trade"]
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+local net = ReplicatedStorage:FindFirstChild("Packages")
+    and ReplicatedStorage.Packages:FindFirstChild("_Index")
+    and ReplicatedStorage.Packages._Index:FindFirstChild("sleitnick_net@0.2.0")
+    and ReplicatedStorage.Packages._Index["sleitnick_net@0.2.0"]:FindFirstChild("net")
 
 -- =========================================================
--- MINIMIZE & CLOSE
+-- TARGET BOX 
 -- =========================================================
-local minimized = false
+local targetBox = Instance.new("TextBox", tradeFrame)
+targetBox.Size = UDim2.new(1, -20, 0, 30)
+targetBox.Position = UDim2.new(0, 10, 0, 10)
+targetBox.PlaceholderText = "Enter target username"
+targetBox.Text = ""
+targetBox.BackgroundColor3 = Color3.fromRGB(60, 0, 100)
+targetBox.TextColor3 = Color3.fromRGB(255,255,255)
+targetBox.Font = Enum.Font.Gotham
+targetBox.TextSize = 14
+Instance.new("UICorner", targetBox).CornerRadius = UDim.new(0,6)
 
-minimizeBtn.MouseButton1Click:Connect(function()
-    minimized = not minimized
+-- =========================================================
+-- TELEPORT BUTTON
+-- =========================================================
+local teleportBtn = Instance.new("TextButton", tradeFrame)
+teleportBtn.Size = UDim2.new(1, -20, 0, 30)
+teleportBtn.Position = UDim2.new(0, 10, 0, 50)
+teleportBtn.Text = "Teleport to Player"
+teleportBtn.BackgroundColor3 = Color3.fromRGB(40,0,80)
+teleportBtn.TextColor3 = Color3.fromRGB(255,255,255)
+teleportBtn.Font = Enum.Font.GothamBold
+teleportBtn.TextSize = 14
+Instance.new("UICorner", teleportBtn).CornerRadius = UDim.new(0,6)
 
-    if minimized then
-        tabBar.Visible = false
-        tabLineTop.Visible = false
-        tabLineBottom.Visible = false
-        
-        for _, f in pairs(contents) do
-            f.Visible = false
+local function teleportToPlayer(username)
+    local target = Players:FindFirstChild(username)
+    if target and target.Character and LocalPlayer.Character then
+        local myHRP = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
+        if myHRP and targetHRP then
+            myHRP.CFrame = targetHRP.CFrame + Vector3.new(2,0,0)
+            print("✅ Teleported to "..target.DisplayName)
         end
+    end
+end
 
-        mainFrame.Size = UDim2.new(0, 200, 0, 40)
-        mainFrame.Position = UDim2.new(0.5, -100, 0, 10)
+teleportBtn.MouseButton1Click:Connect(function()
+    local name = targetBox.Text
+    if name ~= "" then
+        teleportToPlayer(name)
     else
-        tabBar.Visible = true
-        tabLineTop.Visible = true
-        tabLineBottom.Visible = true
-        
-        mainFrame.Size = UDim2.new(0, 360, 0, 240)
-        mainFrame.Position = UDim2.new(0.5, -180, 0, 100)
-
-        switchTab("AutoFish")
+        warn("Please enter a target username!")
     end
 end)
 
-closeBtn.MouseButton1Click:Connect(function()
-    gui:Destroy()
-    autofish = false
+-- =========================================================
+-- TRADE FUNCTIONALITY
+-- =========================================================
+local tradeActive = false
+local selectedItems = {}
+local isSending = false
+local stopSending = false
+local totalSelected, successCount, failCount = 0,0,0
+
+local function getRemote(pathTable)
+    local node = ReplicatedStorage
+    for _, name in ipairs(pathTable) do
+        local ok, found = pcall(function() return node:FindFirstChild(name) end)
+        if not ok or not found then return nil end
+        node = found
+    end
+    return node
+end
+
+local RF_CanSendTrade     = getRemote({"RF", "CanSendTrade"})
+local RF_InitiateTrade    = getRemote({"RF", "InitiateTrade"})
+
+if net then
+    RF_CanSendTrade  = RF_CanSendTrade  or net:FindFirstChild("RF/CanSendTrade")
+    RF_InitiateTrade = RF_InitiateTrade or net:FindFirstChild("RF/InitiateTrade")
+end
+
+local function trySendTrade(targetUserId, uuid)
+    if not targetUserId or not uuid then
+        return false, "missing_args"
+    end
+
+    if RF_CanSendTrade then
+        local ok, canSend = pcall(function()
+            return RF_CanSendTrade:InvokeServer(targetUserId)
+        end)
+        if not ok or not canSend then
+            return false, "cannot_send"
+        end
+    end
+
+    local okInit, res = pcall(function()
+        return RF_InitiateTrade:InvokeServer(targetUserId, uuid)
+    end)
+    if not okInit or not res then
+        return false, "initiate_failed"
+    end
+
+    return true, "sent"
+end
+
+local tradeBtn = Instance.new("TextButton", tradeFrame)
+tradeBtn.Size = UDim2.new(1, -20, 0, 30)
+tradeBtn.Position = UDim2.new(0,10,0,90)
+tradeBtn.Text = "Enable Trade Mode"
+tradeBtn.BackgroundColor3 = Color3.fromRGB(40,0,80)
+tradeBtn.TextColor3 = Color3.fromRGB(255,255,255)
+tradeBtn.Font = Enum.Font.GothamBold
+tradeBtn.TextSize = 14
+Instance.new("UICorner", tradeBtn).CornerRadius = UDim.new(0,6)
+
+tradeBtn.MouseButton1Click:Connect(function()
+    tradeActive = not tradeActive
+    if tradeActive then
+        tradeBtn.BackgroundColor3 = Color3.fromRGB(0,150,0)
+        tradeBtn.Text = "Disable Trade Mode"
+    else
+        tradeBtn.BackgroundColor3 = Color3.fromRGB(40,0,80)
+        tradeBtn.Text = "Enable Trade Mode"
+    end
 end)
+
+local sendBtn = Instance.new("TextButton", tradeFrame)
+sendBtn.Size = UDim2.new(1, -20, 0, 30)
+sendBtn.Position = UDim2.new(0,10,0,130)
+sendBtn.Text = "Send Selected Items"
+sendBtn.BackgroundColor3 = Color3.fromRGB(40,0,80)
+sendBtn.TextColor3 = Color3.fromRGB(255,255,255)
+sendBtn.Font = Enum.Font.GothamBold
+sendBtn.TextSize = 14
+Instance.new("UICorner", sendBtn).CornerRadius = UDim.new(0,6)
+
+local stopBtn = Instance.new("TextButton", tradeFrame)
+stopBtn.Size = UDim2.new(1, -20, 0, 30)
+stopBtn.Position = UDim2.new(0,10,0,170)
+stopBtn.Text = "Stop Sending"
+stopBtn.BackgroundColor3 = Color3.fromRGB(40,0,80)
+stopBtn.TextColor3 = Color3.fromRGB(255,255,255)
+stopBtn.Font = Enum.Font.GothamBold
+stopBtn.TextSize = 14
+Instance.new("UICorner", stopBtn).CornerRadius = UDim.new(0,6)
+
+local statusLabel = Instance.new("TextLabel", tradeFrame)
+statusLabel.Size = UDim2.new(1,-20,0,40)
+statusLabel.Position = UDim2.new(0,10,0,210)
+statusLabel.BackgroundTransparency = 1
+statusLabel.TextColor3 = Color3.fromRGB(255,255,200)
+statusLabel.TextWrapped = true
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.TextSize = 14
+statusLabel.TextXAlignment = Enum.TextXAlignment.Center
+statusLabel.TextYAlignment = Enum.TextYAlignment.Center
+statusLabel.Text = "0/0"
+
+local function updateStatus()
+    statusLabel.Text = string.format("%d/%d", successCount, totalSelected)
+end
+
+local function getTargetUserId()
+    local name = targetBox.Text
+    local p = Players:FindFirstChild(name)
+    return p and p.UserId or nil
+end
+
+sendBtn.MouseButton1Click:Connect(function()
+    if isSending then return end
+    if #selectedItems == 0 then
+        warn("No items selected to send.")
+        return
+    end
+
+    local targetUserId = getTargetUserId()
+    if not targetUserId then
+        warn("Target player not found!")
+        return
+    end
+
+    sendBtn.BackgroundColor3 = Color3.fromRGB(0,150,0)
+    sendBtn.Text = "Sending..."
+    totalSelected = #selectedItems
+    successCount, failCount = 0,0
+    updateStatus()
+
+    isSending = true
+    stopSending = false
+    stopBtn.Text = "Stop Sending"
+
+    task.spawn(function()
+        for _, uuid in ipairs(selectedItems) do
+            if stopSending then break end
+
+            local success, _ = trySendTrade(targetUserId, uuid)
+            if success then successCount += 1 else failCount += 1 end
+            updateStatus()
+
+            local waitTime = 6
+            local elapsed = 0
+            while elapsed < waitTime do
+                if stopSending then break end
+                task.wait(0.1)
+                elapsed += 0.1
+            end
+        end
+
+        selectedItems = {}
+        isSending = false
+        stopBtn.Text = "Stop Sending"
+        sendBtn.BackgroundColor3 = Color3.fromRGB(0,150,0)
+        sendBtn.Text = "Send Selected Items"
+    end)
+end)
+
+stopBtn.MouseButton1Click:Connect(function()
+    if isSending then
+        stopSending = true
+        stopBtn.Text = "Stopping..."
+    end
+end)
+
+-- =========================================================
+-- HOOK EQUIP ITEM (Tambahan)
+-- =========================================================
+local ok_mt, mt = pcall(getrawmetatable, game)
+if ok_mt and mt and mt.__namecall then
+    local oldNamecall = mt.__namecall
+    setreadonly(mt,false)
+    mt.__namecall = newcclosure(function(self,...)
+        local args = {...}
+        local method = getnamecallmethod()
+        if tradeActive and tostring(self) == "RE/EquipItem" and method == "FireServer" then
+            local uuid = args[1]
+            if uuid then
+                table.insert(selectedItems, uuid)
+                print("🟣 Item selected:", uuid)
+            end
+            return nil
+        end
+        return oldNamecall(self, unpack(args))
+    end)
+    setreadonly(mt,true)
+else
+    warn("getrawmetatable or __namecall not available.")
+end
+
+
+-- =========================================================
+-- WEBHOOK TAB CONTENT + FUNCTION
+-- =========================================================
+local webhookFrame = contents["Webhook"]
+
+local webhookLabel = Instance.new("TextLabel", webhookFrame)
+webhookLabel.Size = UDim2.new(1, -20, 0, 20)
+webhookLabel.Position = UDim2.new(0, 10, 0, 0)
+webhookLabel.BackgroundTransparency = 1
+webhookLabel.TextColor3 = Color3.fromRGB(200,200,255)
+webhookLabel.Text = "Webhook URL:"
+webhookLabel.Font = Enum.Font.GothamBold
+webhookLabel.TextSize = 14
+webhookLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local webhookBox = Instance.new("TextBox", webhookFrame)
+webhookBox.Size = UDim2.new(1, -20, 0, 30)
+webhookBox.Position = UDim2.new(0, 10, 0, 25)
+webhookBox.PlaceholderText = "Enter Discord webhook URL"
+webhookBox.Text = ""
+webhookBox.BackgroundColor3 = Color3.fromRGB(60, 0, 100)
+webhookBox.TextColor3 = Color3.fromRGB(255,255,255)
+webhookBox.Font = Enum.Font.Gotham
+webhookBox.TextSize = 14
+Instance.new("UICorner", webhookBox).CornerRadius = UDim.new(0,6)
+
+local msgIdLabel = Instance.new("TextLabel", webhookFrame)
+msgIdLabel.Size = UDim2.new(1, -20, 0, 20)
+msgIdLabel.Position = UDim2.new(0, 10, 0, 65)
+msgIdLabel.BackgroundTransparency = 1
+msgIdLabel.TextColor3 = Color3.fromRGB(200,200,255)
+msgIdLabel.Text = "Message ID:"
+msgIdLabel.Font = Enum.Font.GothamBold
+msgIdLabel.TextSize = 14
+msgIdLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local msgIdBox = Instance.new("TextBox", webhookFrame)
+msgIdBox.Size = UDim2.new(1, -20, 0, 30)
+msgIdBox.Position = UDim2.new(0, 10, 0, 90)
+msgIdBox.PlaceholderText = "Enter message ID"
+msgIdBox.Text = ""
+msgIdBox.BackgroundColor3 = Color3.fromRGB(60, 0, 100)
+msgIdBox.TextColor3 = Color3.fromRGB(255,255,255)
+msgIdBox.Font = Enum.Font.Gotham
+msgIdBox.TextSize = 14
+Instance.new("UICorner", msgIdBox).CornerRadius = UDim.new(0,6)
+
+local startWebhookBtn = Instance.new("TextButton", webhookFrame)
+startWebhookBtn.Size = UDim2.new(1, -20, 0, 35)
+startWebhookBtn.Position = UDim2.new(0, 10, 0, 135)
+startWebhookBtn.Text = "Start Webhook Summary"
+startWebhookBtn.BackgroundColor3 = Color3.fromRGB(40,0,80)
+startWebhookBtn.TextColor3 = Color3.fromRGB(255,255,255)
+startWebhookBtn.Font = Enum.Font.GothamBold
+startWebhookBtn.TextSize = 14
+Instance.new("UICorner", startWebhookBtn).CornerRadius = UDim.new(0,6)
+
+-- =========================================================
+-- FUNCTION: Start Webhook Logic
+-- =========================================================
+local function StartWebhookSummary(webhookUrl, messageId)
+    local TextChatService = game:GetService("TextChatService")
+    local HttpService = game:GetService("HttpService")
+    local UserInputService = game:GetService("UserInputService")
+    local Players = game:GetService("Players")
+
+    local WEBHOOK_GENERAL = webhookUrl
+    local lastMessageId = messageId
+
+    local normalCount, mutationCount, lastCaught = {}, {}, {}
+    local UPDATE_INTERVAL = 15 
+
+    local fullFishNames = {
+        "Manta Ray","Hammerhead Shark","Ghost Shark","Blob Shark","Thresher Shark",
+        "Hermit Crab","Orca","Dotted Stingray","Worm Fish","Robot Kraken",
+        "Frostborn Shark","Plasma Shark","Giant Squid","Queen Crab","King Crab",
+        "Thin Armor Shark","Scare","Abyss Seahorse","Megalodon","Great Whale",
+        "Crystal Crab","Gingerbread Shark"
+    }
+
+    local mutations = {
+        "GOLD","GEMSTONE","FAIRY DUST","LIGHTNING","HOLOGRAPHIC",
+        "STONE","ALBNO","CORRUPT","COLOR BURN","GHOST","MIDNIGHT","RADIOACTIVE"
+    }
+
+    local function StripTags(str)
+        return str:gsub("<[^>]->", "")
+    end
+
+    local function CleanMessage(prefix, text)
+        prefix = prefix:gsub("^%s+", ""):gsub("%s+$", "")
+        text = text:gsub("^%s+", ""):gsub("%s+$", "")
+        if prefix ~= "" then
+            return prefix .. " " .. text
+        else
+            return text
+        end
+    end
+
+    local function SendSummary()
+        local desc = "**Normal Fish:**\n"
+        local totalNormal = 0
+        for fish, count in pairs(normalCount) do
+            desc = desc .. string.format("• %s x%d\n", fish, count)
+            totalNormal += count
+        end
+        if next(normalCount) == nil then
+            desc ..= "Belum ada ikan normal.\n"
+        else
+            desc ..= string.format("\nTotal Normal Fish: %d\n", totalNormal)
+        end
+
+        desc ..= "\n――――――――――――――――――――――――――――――――\n\n"
+        desc ..= "**Mutasi Fish:**\n"
+
+        local totalMutation = 0
+        for fish, count in pairs(mutationCount) do
+            desc = desc .. string.format("• %s x%d\n", fish, count)
+            totalMutation += count
+        end
+        if next(mutationCount) == nil then
+            desc ..= "Belum ada ikan mutasi.\n"
+        else
+            desc ..= string.format("\nTotal Mutasi Fish: %d\n", totalMutation)
+        end
+
+        desc ..= "\n――――――――――――――――――――――――――――――――\n\n"
+        desc ..= "**🎣 10 Tangkapan Terakhir:**\n"
+        for i = #lastCaught, 1, -1 do
+            local data = lastCaught[i]
+            desc ..= string.format("• %s → %s (%s)\n", data.player, data.fish, data.mutation)
+        end
+        if #lastCaught == 0 then
+            desc ..= "Belum ada tangkapan terakhir."
+        end
+
+        local timeStr = os.date("%H:%M:%S")
+        local embed = {
+            title = "Tole Fish - Total",
+            description = desc,
+            color = 11928316,
+            timestamp = DateTime.now():ToIsoDate(),
+            footer = { text = "🕒 Last update: " .. timeStr }
+        }
+
+        local headers = { ["Content-Type"] = "application/json" }
+        local body = HttpService:JSONEncode({ embeds = { embed } })
+        local url = WEBHOOK_GENERAL .. "/messages/" .. lastMessageId
+
+        pcall(function()
+            request({
+                Url = url,
+                Method = "PATCH",
+                Headers = headers,
+                Body = body
+            })
+        end)
+    end
+
+    task.spawn(function()
+        while task.wait(UPDATE_INTERVAL) do
+            SendSummary()
+        end
+    end)
+
+    TextChatService.MessageReceived:Connect(function(msg)
+        local channel = msg.TextChannel and msg.TextChannel.Name or "Unknown"
+        if channel ~= "RBXGeneral" then return end
+
+        local prefix = StripTags(msg.PrefixText or "")
+        local text = StripTags(msg.Text or "")
+        local cleaned = CleanMessage(prefix, text)
+
+        local playerName = string.match(cleaned, "%]:%s*([%w_]+)%sobtained") or "Unknown"
+        local foundFish, foundMutation
+
+        for _, fish in ipairs(fullFishNames) do
+            if string.find(cleaned, fish) then
+                foundFish = fish
+                break
+            end
+        end
+        for _, mut in ipairs(mutations) do
+            if string.find(cleaned, mut) then
+                foundMutation = mut
+                break
+            end
+        end
+
+        if foundFish then
+            if foundMutation then
+                local key = foundMutation .. " " .. foundFish
+                mutationCount[key] = (mutationCount[key] or 0) + 1
+            else
+                normalCount[foundFish] = (normalCount[foundFish] or 0) + 1
+            end
+
+            table.insert(lastCaught, {
+                player = playerName,
+                fish = foundFish,
+                mutation = foundMutation or "Normal"
+            })
+            if #lastCaught > 10 then
+                table.remove(lastCaught, 1)
+            end
+        end
+    end)
+end
+
+-- =========================================================
+-- BUTTON CLICK → START FUNCTION
+-- =========================================================
+startWebhookBtn.MouseButton1Click:Connect(function()
+    local url = webhookBox.Text
+    local msgid = msgIdBox.Text
+
+    if url == "" or msgid == "" then
+        warn("⚠️ Please fill Webhook URL and Message ID first!")
+        return
+    end
+
+    print("✅ Webhook started with URL:", url)
+    StartWebhookSummary(url, msgid)
+end)
+
+
 
 local VirtualUser = game:GetService("VirtualUser")
 
