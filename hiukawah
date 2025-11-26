@@ -1,1 +1,1737 @@
+local autofish = false
+local perfectCast = true
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
 
+local net = ReplicatedStorage:WaitForChild("Packages")
+    :WaitForChild("_Index")
+    :WaitForChild("sleitnick_net@0.2.0")
+    :WaitForChild("net")
+
+local equipRemote   = net:WaitForChild("RE/EquipToolFromHotbar")
+local rodRemote     = net:WaitForChild("RF/ChargeFishingRod")
+local miniGameRemote= net:WaitForChild("RF/RequestFishingMinigameStarted")
+local finishRemote  = net:WaitForChild("RE/FishingCompleted")
+local baitRemote    = net:WaitForChild("RE/BaitSpawned")
+local fishRemote    = net:WaitForChild("RE/FishCaught")
+local AutoFishingRemote = net:WaitForChild("RF/UpdateAutoFishingState")
+-- =========================================================
+-- GUI SETUP
+-- =========================================================
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "AutoFishUI"
+gui.ResetOnSpawn = false
+
+local mainFrame = Instance.new("Frame", gui)
+mainFrame.Size = UDim2.new(0, 360, 0, 240)  
+mainFrame.Position = UDim2.new(0.5, -180, 0, 100) 
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+mainFrame.BackgroundTransparency = 0.2
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
+
+local uiStroke = Instance.new("UIStroke", mainFrame)
+uiStroke.Thickness = 3
+uiStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+local gradient = Instance.new("UIGradient", uiStroke)
+gradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(170, 0, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 0, 180))
+}
+gradient.Rotation = 45
+
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 12)
+
+-- =========================================================
+-- HEADER
+-- =========================================================
+local header = Instance.new("Frame", mainFrame)
+header.Size = UDim2.new(1, -10, 0, 30)
+header.Position = UDim2.new(0, 5, 0, 5)
+header.BackgroundTransparency = 1
+
+local title = Instance.new("TextLabel", header)
+title.Size = UDim2.new(1, -90, 1, 0)
+title.Position = UDim2.new(0, 10, 0, 0) 
+title.Text = "T-Walker 3.3"
+title.TextColor3 = Color3.fromRGB(200, 200, 255)
+title.TextXAlignment = Enum.TextXAlignment.Left 
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.TextSize = 16
+
+local minimizeBtn = Instance.new("TextButton", header)
+minimizeBtn.Size = UDim2.new(0, 24, 0, 24)
+minimizeBtn.Position = UDim2.new(1, -55, 0, 3)
+minimizeBtn.Text = "–"
+minimizeBtn.TextScaled = true
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(50, 0, 100)
+Instance.new("UICorner", minimizeBtn).CornerRadius = UDim.new(1, 0)
+
+local closeBtn = Instance.new("TextButton", header)
+closeBtn.Size = UDim2.new(0, 24, 0, 24)
+closeBtn.Position = UDim2.new(1, -28, 0, 3)
+closeBtn.Text = "X"
+closeBtn.TextScaled = true
+closeBtn.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(1, 0)
+
+-- =========================================================
+-- TAB SYSTEM
+-- =========================================================
+local tabBar = Instance.new("Frame", mainFrame)
+tabBar.Size = UDim2.new(0, 100, 1, -50)
+tabBar.Position = UDim2.new(0, 5, 0, 35)
+tabBar.BackgroundTransparency = 1
+tabBar.Visible = true 
+
+local tabs, contents = {}, {}
+
+local function createTab(name, emoji, order)
+    local btn = Instance.new("TextButton", tabBar)
+    btn.Size = UDim2.new(1, 0, 0, 30)
+    btn.Position = UDim2.new(0, 0, 0, (order - 1) * 35)
+    btn.Text = emoji .. " " .. name
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    btn.BackgroundColor3 = Color3.fromRGB(40, 0, 80)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+    local frame = Instance.new("ScrollingFrame", mainFrame)
+    frame.Size = UDim2.new(1, -120, 1, -40)
+    frame.Position = UDim2.new(0, 110, 0, 35)
+    frame.BackgroundTransparency = 1
+    frame.Visible = false
+    frame.BorderSizePixel = 0
+    frame.ScrollBarThickness = 6
+    frame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+
+    tabs[name] = btn
+    contents[name] = frame
+end
+
+createTab("AutoFish", "", 1)
+createTab("Teleport", "", 2)
+createTab("Settings", "", 3)
+createTab("Misc", "", 4)
+createTab("Trade", "", 5)
+createTab("Webhook", "", 6)
+
+local function switchTab(name)
+    for n, f in pairs(contents) do
+        f.Visible = (n == name)
+        if tabs[n] then
+            tabs[n].BackgroundColor3 = f.Visible and Color3.fromRGB(80, 0, 150) or Color3.fromRGB(40, 0, 80)
+        end
+    end
+end
+
+switchTab("AutoFish")
+
+for name, btn in pairs(tabs) do
+    btn.MouseButton1Click:Connect(function()
+        switchTab(name)
+    end)
+end
+
+
+-- =========================================================
+-- MINIMIZE & CLOSE 
+-- =========================================================
+local minimized = false
+local restoreButton = Instance.new("TextButton", mainFrame)
+restoreButton.Size = UDim2.new(1, 0, 1, 0)
+restoreButton.Position = UDim2.new(0, 0, 0, 0)
+restoreButton.BackgroundTransparency = 1
+restoreButton.Text = ""
+restoreButton.Visible = false
+
+minimizeBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+
+    if minimized then
+        tabBar.Visible = false
+        for _, f in pairs(contents) do
+            f.Visible = false
+        end
+
+        mainFrame.Size = UDim2.new(0, 200, 0, 40)
+        mainFrame.Position = UDim2.new(0.5, -100, 0, 10)
+
+        minimizeBtn.Visible = false
+        closeBtn.Visible = false
+
+        title.AnchorPoint = Vector2.new(0.5, 0.5)
+        title.Position = UDim2.new(0.5, 0, 0.5, 0)
+        title.Size = UDim2.new(1, -40, 1, 0)
+        title.TextXAlignment = Enum.TextXAlignment.Center
+
+        restoreButton.Visible = true
+    else
+        tabBar.Visible = true
+        minimizeBtn.Visible = true
+        closeBtn.Visible = true
+        restoreButton.Visible = false
+
+        mainFrame.Size = UDim2.new(0, 360, 0, 240)
+        mainFrame.Position = UDim2.new(0.5, -180, 0, 100)
+        switchTab("AutoFish")
+
+        title.AnchorPoint = Vector2.new(0, 0)
+        title.Position = UDim2.new(0, 10, 0, 0)
+        title.Size = UDim2.new(1, -90, 1, 0)
+        title.Text = "T-Walker 3.3"
+        title.TextColor3 = Color3.fromRGB(200, 200, 255)
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        title.BackgroundTransparency = 1
+        title.Font = Enum.Font.GothamBold
+        title.TextSize = 16
+    end
+end)
+
+restoreButton.MouseButton1Click:Connect(function()
+    if minimized then
+        minimized = false
+
+        tabBar.Visible = true
+        minimizeBtn.Visible = true
+        closeBtn.Visible = true
+        restoreButton.Visible = false
+
+        mainFrame.Size = UDim2.new(0, 360, 0, 240)
+        mainFrame.Position = UDim2.new(0.5, -180, 0, 100)
+        switchTab("AutoFish")
+
+        title.AnchorPoint = Vector2.new(0, 0)
+        title.Position = UDim2.new(0, 10, 0, 0)
+        title.Size = UDim2.new(1, -90, 1, 0)
+        title.Text = "T-Walker 3.3"
+        title.TextColor3 = Color3.fromRGB(200, 200, 255)
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        title.BackgroundTransparency = 1
+        title.Font = Enum.Font.GothamBold
+        title.TextSize = 16
+    end
+end)
+
+closeBtn.MouseButton1Click:Connect(function()
+    gui:Destroy()
+    autofish = false
+end)
+
+-- =========================================================
+-- AUTO FISH LOGIC
+-- =========================================================
+
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
+
+local function stopAll()
+    for _, t in pairs(animator:GetPlayingAnimationTracks()) do
+        t:Stop()
+    end
+end
+local function playAnimation(animId)
+    stopAll()
+    local animation = Instance.new("Animation")
+    animation.AnimationId = animId
+    local track = animator:LoadAnimation(animation)
+    track:Play()
+    return track
+end
+
+
+local function sellAllFish(statusLabel)
+    local net = game:GetService("ReplicatedStorage"):WaitForChild("Packages")
+        :WaitForChild("_Index")
+        :WaitForChild("sleitnick_net@0.2.0")
+        :WaitForChild("net")
+    local sellRemote = net:WaitForChild("RF/SellAllItems")
+
+    statusLabel.Text = "Status: 💰 Selling..."
+    statusLabel.TextColor3 = Color3.fromRGB(255, 220, 100)
+
+    pcall(function()
+        sellRemote:InvokeServer()
+    end)
+
+    task.wait(1) 
+    statusLabel.Text = "Status: ✔ Running"
+    statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
+end
+
+
+local priority = {257,258,169,168,126,5,80,1}
+local Players = game:GetService("Players") 
+local ReplStorage = game:GetService("ReplicatedStorage") 
+local player = Players.LocalPlayer
+local Replion = require(ReplStorage.Packages.Replion) 
+local ClientData = Replion.Client:WaitReplion("Data")
+
+local remote = ReplStorage:WaitForChild("Packages")
+    :WaitForChild("_Index")
+    :WaitForChild("sleitnick_net@0.2.0")
+    :WaitForChild("net")
+    :WaitForChild("RE/EquipItem")
+
+
+local function getCoin()
+    local data = ClientData:Get()
+    return data.Coins or 0
+end
+
+local function getFishingRods()
+    local timeout = tick() + 5 
+    local rods = {}
+    
+    while tick() < timeout do
+        local items = ClientData.Data.Items or ClientData.Data.Inventory or {}
+        rods = items["Fishing Rods"] or {}
+        
+        if next(rods) ~= nil then
+            break 
+        end
+        task.wait(0.5) 
+    end
+    
+    return rods
+end
+
+local function getBestRodUUID()
+    task.wait(0.5)
+    local rods = getFishingRods() 
+    for _, rodId in ipairs(priority) do
+        for _, rod in pairs(rods) do
+            if rod.Id == rodId then
+                return rod.UUID
+            end
+        end
+    end
+    return nil
+end
+
+local function EquipBestFishingRod()
+    local uuid = getBestRodUUID() 
+    if uuid then
+        local success, err = pcall(function()
+            remote:FireServer(uuid, "Fishing Rods")
+        end)
+        if success then
+            print("✅ Best rod equipped! UUID:", uuid)
+        else
+            warn("❌ Failed to equip rod:", err)
+        end
+    else
+        warn("⚠️ No rod found in inventory according to priority!")
+    end
+end
+
+local RodDelays = {
+    [257] = 1.2, [258] = 1.2, [169] = 1.3, [168] = 1.4,
+    [126] = 1.5, [5] = 1.4, [80] = 1.8, [1] = 3.8
+}
+
+local function getRodIdFromUUID(uuid)
+    local rods = getFishingRods()
+    for _, rod in pairs(rods) do
+        if rod.UUID == uuid then
+            return rod.Id
+        end
+    end
+    return nil
+end
+
+local stopping = false
+local customDelay = nil 
+local autofishActive = nil
+
+local fishConn = nil
+
+local function SetupFishListener(label)
+    if fishConn then fishConn:Disconnect() end
+    statusLabel = label
+    if not catchCount then catchCount = 0 end
+    fishConn = fishRemote.OnClientEvent:Connect(function(fishInfo)
+        catchCount += 1
+        if statusLabel then
+            statusLabel.Text = string.format("Status: 🐟 Catch %d", catchCount)
+            statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
+        end
+        if catchCount >= 30 then
+            sellAllFish(statusLabel)
+            catchCount = 0
+        end
+    end)
+end
+
+
+local function DisconnectFishListener()
+    if fishConn then
+        fishConn:Disconnect()
+        fishConn = nil
+    end
+end
+
+function startLegit(label)
+    if autofishActive then return end
+    autofishActive = true
+
+    AutoFishingRemote:InvokeServer(true)
+    SetupFishListener(label)
+    startAutoTap()
+end
+
+function stopLegit(label)
+    if not autofishActive then return end
+    autofishActive = false
+    statusLabel = label
+    if statusLabel then
+        statusLabel.Text = "Status: X Stopped"
+        statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
+    end
+    AutoFishingRemote:InvokeServer(false)
+    DisconnectFishListener()
+end
+
+local autoTapEnabled = false
+local tapTask
+
+function startAutoTap()
+    if autoTapEnabled then return end
+    autoTapEnabled = true
+
+    local RunService = game:GetService("RunService")
+    local Workspace = game:GetService("Workspace")
+    local VirtualInputManager = game:GetService("VirtualInputManager")
+    local UserInputService = game:GetService("UserInputService")
+
+    local camera = Workspace.CurrentCamera
+    local loopDelay = 0.1 -- kecepatan klik
+
+    -- sembunyikan kursor dan kunci di tengah
+    UserInputService.MouseIconEnabled = false
+    UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+
+    tapTask = task.spawn(function()
+        while autoTapEnabled do
+            local x = 20
+            local y = camera.ViewportSize.Y - 100
+
+            VirtualInputManager:SendMouseButtonEvent(x, y, 0, true, game, 0)
+            task.wait(0.01)
+            VirtualInputManager:SendMouseButtonEvent(x, y, 0, false, game, 0)
+
+            task.wait(loopDelay)
+            RunService.Heartbeat:Wait()
+        end
+    end)
+end
+
+function stopAutoTap()
+    if not autoTapEnabled then return end
+    autoTapEnabled = false
+
+    local UserInputService = game:GetService("UserInputService")
+    UserInputService.MouseIconEnabled = true
+    UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+
+    if tapTask then
+        task.cancel(tapTask)
+        tapTask = nil
+    end
+end
+
+local function startFishing(statusLabel)
+    if autofish then return end
+    autofish, stopping = true, false
+    catchCount = catchCount or 0
+
+    if fishConn then
+        fishConn:Disconnect()
+        fishConn = nil
+    end
+
+    if statusLabel then
+        statusLabel.Text = "Status: ✔ Running"
+        statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
+    end
+
+    fishConn = fishRemote.OnClientEvent:Connect(function()
+        catchCount += 1
+        if statusLabel then
+            statusLabel.Text = "Status: 🐟 Catch " .. catchCount
+            statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
+        end
+    end)
+
+    task.spawn(function()
+        EquipBestFishingRod(statusLabel)
+        task.wait(0.5)
+        equipRemote:FireServer(1)
+        task.wait(0.25)
+
+        local uuid = getBestRodUUID()
+        local rodId = getRodIdFromUUID(uuid)
+        local DelayRods = customDelay or RodDelays[rodId] or 3.4
+
+
+        while autofish do
+            local timestamp = workspace:GetServerTimeNow()
+            rodRemote:InvokeServer(timestamp)
+            task.wait(math.random(20, 30) / 100)
+
+            miniGameRemote:InvokeServer(-1.25, 1, timestamp)
+            local baitConn = baitRemote.OnClientEvent:Connect(function() end)
+            task.wait(DelayRods)
+
+            baitConn:Disconnect()
+            finishRemote:FireServer()
+            task.wait(0)
+            
+            if catchCount >= 1000 then
+                sellAllFish(statusLabel)
+                catchCount = 0
+            end
+
+            if stopping then
+                autofish = false
+                if fishConn then
+                    fishConn:Disconnect()
+                    fishConn = nil
+                end
+                task.wait(0.1)
+                if statusLabel then
+                    statusLabel.Text = "Status: ✖ Not Running"
+                    statusLabel.TextColor3 = Color3.fromRGB(255, 120, 120)
+                end
+                break
+            end
+        end
+    end)
+end
+
+
+
+local function stopFishing(statusLabel)
+    if autofish then
+        stopping = true
+        statusLabel.Text = "Status: ⏳ Stopping..."
+        statusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+    else
+        statusLabel.Text = "Status: ✖ Not Running"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 120, 120)
+    end
+end
+
+
+local rodPrices = {
+    [80]  = 51000,     
+    [5]   = 1100000,   
+    [126] = 3100000,   
+    [168] = 8100000,
+}
+
+local currentRod = nil
+
+local function getRodUUIDFromInventory(rodId)
+    local rodsInventory = getFishingRods()
+    for _, rod in pairs(rodsInventory) do
+        if rod.Id == rodId then
+            return rod.UUID or rod.Id
+        end
+    end
+    return nil
+end
+
+local function buyOrEquipRod(rodId)
+    local purchaseRemote = net:WaitForChild("RF/PurchaseFishingRod")
+
+    local rodUUID = getRodUUIDFromInventory(rodId)
+    if rodUUID then
+        if currentRod ~= rodId then
+            remote:FireServer(rodUUID, "Fishing Rods")
+            currentRod = rodId
+            print("✅ Equipped rod ID " .. rodId)
+        else
+            print("ℹ️ Rod ID " .. rodId .. " sudah equipped")
+        end
+        return true
+    end
+
+    local success, err = pcall(function()
+        purchaseRemote:InvokeServer(rodId)
+    end)
+
+    if not success then
+        warn("⚠️ Failed to buy rod ID " .. rodId, err)
+        return false
+    end
+
+    task.wait(1)
+
+    rodUUID = getRodUUIDFromInventory(rodId)
+    if rodUUID then
+        remote:FireServer(rodUUID, "Fishing Rods")
+        currentRod = rodId
+        print("✅ Bought & Equipped rod ID " .. rodId)
+        return true
+    else
+        warn("⚠️ Gagal beli rod ID " .. rodId)
+        return false
+    end
+end
+
+local function AutoBuyRodPriority(money)
+    for _, rodId in ipairs(priority) do
+        local rodUUID = getRodUUIDFromInventory(rodId)
+        if rodUUID then
+            buyOrEquipRod(rodId)
+            return
+        else
+            local price = rodPrices[rodId]
+            if price and money >= price then
+                buyOrEquipRod(rodId)
+                return
+            end
+        end
+    end
+end
+
+-- =========================================================
+-- GRINDING FUNCTION
+-- =========================================================
+function grinding(statusLabel)
+    local catchCount = 0 
+    if autofish then
+        stopping = true
+        return
+    end
+    if fishConn then
+        fishConn:Disconnect()
+        fishConn = nil
+    end
+    if statusLabel then
+        statusLabel.Text = "Status: ✔ Running"
+        statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
+    end
+    local fishConn
+    fishConn = fishRemote.OnClientEvent:Connect(function()
+        catchCount += 1
+        if statusLabel then
+            statusLabel.Text = "Status: 🐟 Catch " .. catchCount
+            statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
+        end
+    end)
+    autofish = true
+    stopping = false
+    statusLabel.Text = "Status: ✔ Running"
+    statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
+
+    task.spawn(function()
+        EquipBestFishingRod()
+        task.wait(1)
+        equipRemote:FireServer(1)
+        task.wait(1)
+        local uuid = getBestRodUUID()
+        local rodId = getRodIdFromUUID(uuid)
+        local DelayRods = customDelay or RodDelays[rodId] or 3.4
+        while autofish do
+            local timestamp = perfectCast and 9999999999 or (tick() + math.random())
+            rodRemote:InvokeServer(timestamp)
+            task.wait(0.1)
+            local reelTrack = playAnimation("rbxassetid://134965425664034")
+            miniGameRemote:InvokeServer(-1.238, 0.969)
+            task.wait(DelayRods)
+
+            local baitConn = baitRemote.OnClientEvent:Connect(function() end)
+            finishRemote:FireServer()
+
+            baitConn:Disconnect()
+            reelTrack:Stop()
+
+
+            if catchCount >= 50 then
+                sellAllFish(statusLabel)
+                catchCount = 0
+            end
+
+            local money = getCoin()
+            AutoBuyRodPriority(money)
+
+            if stopping then
+                autofish = false
+                statusLabel.Text = "Status: ✖ Stopped"
+                statusLabel.TextColor3 = Color3.fromRGB(255, 120, 120)
+                break
+            end
+
+            task.wait(0.2)
+        end
+    end)
+end
+
+-- =========================================================
+-- AUTO FISH TAB UI
+-- =========================================================
+local autoTab = contents["AutoFish"]
+
+local statusLabel = Instance.new("TextLabel", autoTab)
+statusLabel.Size = UDim2.new(1, 0, 0, 25)
+statusLabel.Position = UDim2.new(0, 0, 0, 10)
+statusLabel.Text = "Status: X Not Running"
+statusLabel.TextColor3 = Color3.fromRGB(255, 120, 120)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.TextSize = 14
+
+local function createButton(text, posY, callback, parent)
+    local btn = Instance.new("TextButton", parent)
+    btn.Size = UDim2.new(1, 0, 0, 30)
+    btn.Position = UDim2.new(0, 0, 0, posY)
+    btn.Text = text
+    btn.BackgroundColor3 = Color3.fromRGB(40, 0, 80)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    btn.MouseButton1Click:Connect(callback)
+end
+
+local fishingActive = true
+local legitActive = false
+
+createButton("🎣 Start / Stop Fishing", 40, function()
+    fishingActive = not fishingActive
+
+    if fishingActive then
+        startFishing(statusLabel)
+    else
+        stopFishing(statusLabel)
+    end
+end, autoTab)
+
+createButton("⚡ Start / Stop Legit", 80, function()
+    legitActive = not legitActive
+
+    if legitActive then
+        EquipBestFishingRod(statusLabel)
+        task.wait(0.5)
+        equipRemote:FireServer(1)
+        task.wait(0.25)
+        startLegit(statusLabel)
+    else
+        stopLegit(statusLabel)
+    end
+end, autoTab)
+createButton("X Stop AutoTAP", 120, function()
+    stopAutoTap()
+end, autoTab)
+
+createButton("Auto Grinding ON/OFF", 160, function()
+    if autofish then
+        stopping = true
+        statusLabel.Text = "Status: ⏳ Stopping..."
+        statusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+    else
+        grinding(statusLabel)
+    end
+end, autoTab)
+
+
+-- =========================================================
+-- TELEPORT TAB (Auto Generate)
+-- =========================================================
+local tpTab = contents["Teleport"]
+
+local tpLabel = Instance.new("TextLabel", tpTab)
+tpLabel.Size = UDim2.new(1, 0, 0, 25)
+tpLabel.Position = UDim2.new(0, 0, 0, 10)
+tpLabel.Text = "Teleport to:"
+tpLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
+tpLabel.BackgroundTransparency = 1
+tpLabel.Font = Enum.Font.Gotham
+tpLabel.TextSize = 14
+
+-- =========================================================
+-- DAFTAR TEMPAT TELEPORT
+-- =========================================================
+local teleportLocations = {
+    ["Ancient Jungle"] = {
+        {pos = Vector3.new(1480.2, 3.8, -335.3), lookDir = Vector3.new(0.74, 0.00, 0.67)},
+        {pos = Vector3.new(1544.6, 3.1, -415.9), lookDir = Vector3.new(0.72, 0.00, -0.70)},
+    },
+    ["Underground"] = {
+        {pos = Vector3.new(2159.0, -91.3, -727.2), lookDir = Vector3.new(-0.94, 0.00, 0.35)},
+        {pos = Vector3.new(2140.7, -91.2, -698.7), lookDir = Vector3.new(-0.01, -0.00, -1.00)},
+    },
+    ["Secret Temple"] = {
+        {pos = Vector3.new(1452.2, -22.1, -622.2), lookDir = Vector3.new(0.22, 0.00, 0.98)},
+        {pos = Vector3.new(1506.3, -22.1, -628.1), lookDir = Vector3.new(0.15, 0.00, 0.99)},
+        {pos = Vector3.new(1503.4, -22.1, -640.7), lookDir = Vector3.new(-0.12, -0.00, -0.99)},
+        {pos = Vector3.new(1447.5, -22.1, -635.3), lookDir = Vector3.new(-0.19, -0.00, -0.98)},
+    },
+    ["Ocean"] = {
+        {pos = Vector3.new(-1460.4, 13.1, 1826.7), lookDir = Vector3.new(0.48, 0.00, -0.88)},
+        {pos = Vector3.new(-1524.6, 8.4, 1773.7), lookDir = Vector3.new(0.27, 0.00, -0.96)},
+        {pos = Vector3.new(-1600.8, 12.3, 1833.1), lookDir = Vector3.new(-0.74, 0.00, -0.68)},
+        {pos = Vector3.new(-1600.6, 19.4, 1900.2), lookDir = Vector3.new(-0.54, 0.00, 0.84)},
+        {pos = Vector3.new(-1572.5, 13.1, 1921.8), lookDir = Vector3.new(0.17, -0.00, 0.99)},
+    },
+    ["Hallowen"] = {
+        {pos = Vector3.new(2165.2, 148.0, 3342.1), lookDir = Vector3.new(-0.71, -0.00, -0.70)},
+        {pos = Vector3.new(1856.7, 1.7, 2909.4), lookDir = Vector3.new(-0.08, 0.00, 1.00)},
+        {pos = Vector3.new(1592.7, 3.4, 3146.4), lookDir = Vector3.new(-0.68, -0.00, -0.74)},
+        {pos = Vector3.new(1678.3, 2.3, 3214.5), lookDir = Vector3.new(0.92, -0.00, -0.38)},
+        {pos = Vector3.new(2124.0, 103.5, 3339.1), lookDir = Vector3.new(0.16, 0.00, -0.99)},
+    },
+    ["Sisyphus"] = {
+        {pos = Vector3.new(-3713.5, -135.1, -1013.1), lookDir = Vector3.new(-0.22, -0.00, 0.98)},
+        {pos = Vector3.new(-3740.1, -135.1, -1009.4), lookDir = Vector3.new(0.49, 0.00, 0.87)},
+        {pos = Vector3.new(-3757.4, -135.1, -1000.0), lookDir = Vector3.new(0.48, -0.00, 0.88)},
+        {pos = Vector3.new(-3674.4, -135.1, -995.5), lookDir = Vector3.new(-0.62, 0.00, 0.78)},
+        {pos = Vector3.new(-3657.1, -134.1, -959.3), lookDir = Vector3.new(-0.98, -0.00, 0.20)},
+        {pos = Vector3.new(-3691.2, -135.1, -892.4), lookDir = Vector3.new(-0.24, -0.00, -0.97)},
+        {pos = Vector3.new(-3705.0, -135.1, -885.3), lookDir = Vector3.new(-0.35, -0.00, -0.93)},
+    },
+    ["Fisherman Island"] = {
+        {pos = Vector3.new(34.2, 1.9, 2759.7), lookDir = Vector3.new(-0.23, -0.00, -0.97)},
+        {pos = Vector3.new(149.0, 2.6, 2785.0), lookDir = Vector3.new(0.76, 0.00, -0.65)},
+        {pos = Vector3.new(197.1, 2.7, 2796.6), lookDir = Vector3.new(0.71, -0.00, -0.70)},
+        {pos = Vector3.new(224.9, 2.2, 2831.8), lookDir = Vector3.new(0.97, 0.00, -0.26)},
+        {pos = Vector3.new(241.9, 2.5, 2895.3), lookDir = Vector3.new(0.87, -0.00, -0.49)},
+        {pos = Vector3.new(-120.3, 3.3, 2948.9), lookDir = Vector3.new(-0.83, 0.00, -0.55)},
+        {pos = Vector3.new(-114.6, 3.3, 2929.4), lookDir = Vector3.new(-0.60, -0.00, -0.80)},
+    },
+    ["Kohana"] = {
+        {pos = Vector3.new(-844.8, 55.5, 355.9), lookDir = Vector3.new(-0.88, -0.00, 0.47)},
+        {pos = Vector3.new(-921.6, 52.8, 357.3), lookDir = Vector3.new(0.85, 0.00, 0.52)},
+        {pos = Vector3.new(-1027.6, 31.5, 418.3), lookDir = Vector3.new(1.00, 0.00, -0.02)},
+        {pos = Vector3.new(-638.7, 16.0, 566.2), lookDir = Vector3.new(0.18, 0.00, -0.98)},
+    },
+    ["Treasure Room"] = {
+        {pos = Vector3.new(-3655.9, -268.5, -1630.1), lookDir = Vector3.new(0.95, 0.00, 0.32)},
+        {pos = Vector3.new(-3598.0, -275.7, -1641.0), lookDir = Vector3.new(-0.66, 0.00, 0.75)},
+        {pos = Vector3.new(-3550.9, -261.7, -1671.5), lookDir = Vector3.new(-0.99, 0.00, -0.16)},
+        {pos = Vector3.new(-3648.0, -264.0, -1677.4), lookDir = Vector3.new(0.98, -0.00, 0.19)},
+    },
+    ["Tropical Island"] = {
+        {pos = Vector3.new(-2190.8, 25.4, 3594.3), lookDir = Vector3.new(-0.63, -0.00, -0.78)},
+        {pos = Vector3.new(-2157.6, 25.4, 3828.3), lookDir = Vector3.new(-0.99, 0.00, -0.17)},
+        {pos = Vector3.new(-2018.6, 25.4, 3865.3), lookDir = Vector3.new(0.21, -0.00, 0.98)},
+        {pos = Vector3.new(-1957.6, 25.4, 3755.6), lookDir = Vector3.new(0.96, 0.00, -0.27)},
+    },
+    ["Coral Reefs"] = {
+        {pos = Vector3.new(-2947.46, 2.75, 2110.76), lookDir = Vector3.new(0.16, -0.00, -0.99)},
+        {pos = Vector3.new(-2937.30, 2.75, 2111.35), lookDir = Vector3.new(0.00, 0.00, -1.00)},
+        {pos = Vector3.new(-2974.28, 2.87, 2090.02), lookDir = Vector3.new(0.99, -0.00, -0.17)},
+        {pos = Vector3.new(-2969.94, 4.00, 2043.68), lookDir = Vector3.new(0.74, 0.00, 0.67)},
+        {pos = Vector3.new(-2928.52, 6.00, 2053.06), lookDir = Vector3.new(-0.52, -0.00, 0.85)},
+    },
+    ["Crater Island"] = {
+        {pos = Vector3.new(987.6, 1.7, 5141.6), lookDir = Vector3.new(0, 0, -1)}, 
+        {pos = Vector3.new(1015.5, 1.7, 5147.2), lookDir = Vector3.new(0, 0, -1)},
+        {pos = Vector3.new(1008.6, 1.9, 5148.4), lookDir = Vector3.new(0, 0, -1)},
+        {pos = Vector3.new(997.9, 1.5, 5146.9), lookDir = Vector3.new(0, 0, -1)}, 
+        {pos = Vector3.new(1041.3, 2.0, 5142.0), lookDir = Vector3.new(-0.42, -0.00, -0.91)},
+        {pos = Vector3.new(950.3, 2.6, 5116.6), lookDir = Vector3.new(0.73, 0.00, -0.69)},
+        {pos = Vector3.new(1072.7, 3.5, 5097.7), lookDir = Vector3.new(-0.97, 0.00, -0.26)},
+    },
+    ["Kohana Volcano"] = {
+        {pos = Vector3.new(-629.3, 30.0, 99.0), lookDir = Vector3.new(0, 0, -1)},
+    },
+    ["Merchant Store"] = {
+        {pos = Vector3.new(-131.0, 2.4, 2765.6), lookDir = Vector3.new(0.54, -0.00, -0.84)},
+    },
+    ["Tempat Keramat"] = {
+        {pos = Vector3.new(3233.0, -1302.9, 1400.8), lookDir = Vector3.new(0.88, -0.00, -0.48)},
+        {pos = Vector3.new(1481.5, 127.6, -596.8), lookDir = Vector3.new(-0.16, -0.00, -0.99)},
+    },
+    ["Esoteric Depths"] = {
+        {pos = Vector3.new(3165.5, -1226.5, 1320.4), lookDir = Vector3.new(0.37, -0.00, -0.93)},
+        {pos = Vector3.new(3289.2, -1302.9, 1462.3), lookDir = Vector3.new(0.63, 0.00, 0.78)},
+        {pos = Vector3.new(3176.4, -1302.9, 1470.4), lookDir = Vector3.new(-0.96, 0.00, 0.26)},
+        {pos = Vector3.new(3030.0, -1301.0, 1421.9), lookDir = Vector3.new(0.05, -0.00, 1.00)},
+    },
+    ["Crystal Cavern"] = {
+        {pos = Vector3.new(-1609.9, -447.8, 7377.7), lookDir = Vector3.new(0.95, 0.00, 0.31)},
+        {pos = Vector3.new(-1702.7, -432.2, 7409.5), lookDir = Vector3.new(-0.28, -0.00, -0.96)},
+    },
+}
+
+-- =========================================================
+-- AUTO GENERATE BUTTONS
+-- =========================================================
+local teleportPriority = {"Crystal Cavern", "Ocean", "Hallowen"} 
+local teleportActions = {}
+local yOffset = 40
+
+for _, name in ipairs(teleportPriority) do
+    local spots = teleportLocations[name]
+    if spots then
+        local function teleportFunc()
+            local plr = game.Players.LocalPlayer
+            if plr and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                local spot = spots[math.random(1, #spots)]
+                plr.Character:SetPrimaryPartCFrame(CFrame.new(
+                    spot.pos,
+                    spot.pos + spot.lookDir
+                ))
+            end
+        end
+        teleportActions[name] = teleportFunc
+        createButton(name, yOffset, teleportFunc, tpTab)
+        yOffset = yOffset + 40
+    end
+end
+
+for name, spots in pairs(teleportLocations) do
+    if not table.find(teleportPriority, name) then
+        local function teleportFunc()
+            local plr = game.Players.LocalPlayer
+            if plr and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                local spot = spots[math.random(1, #spots)]
+                plr.Character:SetPrimaryPartCFrame(CFrame.new(
+                    spot.pos,
+                    spot.pos + spot.lookDir
+                ))
+            end
+        end
+        teleportActions[name] = teleportFunc
+        createButton(name, yOffset, teleportFunc, tpTab)
+        yOffset = yOffset + 40
+    end
+end
+
+
+-- =========================================================
+-- OTHER TABS SETTINGS
+-- =========================================================
+local setTab = contents["Settings"]
+
+local function createButton(text, posY, callback, parent)
+    local btn = Instance.new("TextButton", parent)
+    btn.Size = UDim2.new(1, 0, 0, 30)
+    btn.Position = UDim2.new(0, 0, 0, posY)
+    btn.Text = text
+    btn.BackgroundColor3 = Color3.fromRGB(40, 0, 80)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    btn.MouseButton1Click:Connect(callback)
+    return btn
+end
+
+local autoWeather = false
+local autoWeatherLabel = Instance.new("TextLabel", setTab)
+autoWeatherLabel.Size = UDim2.new(1, 0, 0, 25)
+autoWeatherLabel.Position = UDim2.new(0, 0, 0, 10)
+autoWeatherLabel.Text = "Status: 🔴 Off"
+autoWeatherLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+autoWeatherLabel.BackgroundTransparency = 1
+autoWeatherLabel.Font = Enum.Font.Gotham
+autoWeatherLabel.TextSize = 14
+
+local function updateAutoWeatherLabel(tempText, duration)
+    if tempText then
+        autoWeatherLabel.Text = tempText
+        if duration then
+            task.delay(duration, function()
+                autoWeatherLabel.Text = autoWeather and "Status: 🟢 On" or "Status: 🔴 Off"
+            end)
+        end
+    else
+        autoWeatherLabel.Text = autoWeather and "Status: 🟢 On" or "Status: 🔴 Off"
+    end
+end
+
+createButton("Rejoin Server", 40, function()
+    local ts = game:GetService("TeleportService")
+    local lp = game:GetService("Players").LocalPlayer
+    ts:Teleport(game.PlaceId, lp)
+end, setTab)
+
+createButton("Sell All Fish", 80, function()
+    local net = game:GetService("ReplicatedStorage"):WaitForChild("Packages")
+        :WaitForChild("_Index"):WaitForChild("sleitnick_net@0.2.0"):WaitForChild("net")
+    local sellRemote = net:WaitForChild("RF/SellAllItems")
+    pcall(function()
+        sellRemote:InvokeServer()
+        updateAutoWeatherLabel("✅ Items Sold!", 2)
+    end)
+end, setTab)
+
+createButton("Auto Weather", 120, function()
+    autoWeather = not autoWeather
+    updateAutoWeatherLabel()
+
+    if autoWeather then
+        task.spawn(function()
+            local eventsFolder = game:GetService("ReplicatedStorage"):WaitForChild("Events")
+            local weathers = {}
+            for _, eventModule in ipairs(eventsFolder:GetChildren()) do
+                if eventModule:IsA("ModuleScript") then
+                    local success, eventData = pcall(require, eventModule)
+                    if success and eventData and type(eventData) == "table" then
+                        local weatherInfo = {
+                            Name = eventData.Name or eventModule.Name,
+                            Price = eventData.WeatherMachinePrice or 0,
+                            Desc = eventData.Description or "No description",
+                        }
+                        table.insert(weathers, weatherInfo)
+                    end
+                end
+            end
+
+            local allowedWeathers = {["Radiant"]=true, ["Storm"]=true, ["Wind"]=true}
+            local autoWeatherWeathers = {}
+            for _, w in ipairs(weathers) do
+                if allowedWeathers[w.Name] then
+                    table.insert(autoWeatherWeathers, w)
+                end
+            end
+
+            local net = game:GetService("ReplicatedStorage"):WaitForChild("Packages")
+                :WaitForChild("_Index"):WaitForChild("sleitnick_net@0.2.0"):WaitForChild("net")
+            local weatherRemote = net:WaitForChild("RF/PurchaseWeatherEvent")
+
+            local index = 1
+            while autoWeather and #autoWeatherWeathers > 0 do
+                local weatherName = autoWeatherWeathers[index].Name
+                pcall(function()
+                    weatherRemote:InvokeServer(weatherName)
+                end)
+                index = index + 1
+                if index > #autoWeatherWeathers then index = 1 end
+                task.wait(2)
+            end
+        end)
+    end
+end, setTab)
+
+-- Label judul
+local delayTitle = Instance.new("TextLabel", setTab)
+delayTitle.Size = UDim2.new(1, 0, 0, 20)
+delayTitle.Position = UDim2.new(0, 0, 0, 160)
+delayTitle.Text = "🎣 Custom Fishing Delay"
+delayTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+delayTitle.BackgroundTransparency = 1
+delayTitle.Font = Enum.Font.GothamBold
+delayTitle.TextSize = 14
+
+-- TextBox input
+local delayBox = Instance.new("TextBox", setTab)
+delayBox.Size = UDim2.new(0, 120, 0, 28)
+delayBox.Position = UDim2.new(0, 0, 0, 185)
+delayBox.PlaceholderText = "Delay (contoh: 1.3)"
+delayBox.Text = ""
+delayBox.BackgroundColor3 = Color3.fromRGB(40, 0, 80)
+delayBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+delayBox.Font = Enum.Font.Gotham
+delayBox.TextSize = 14
+Instance.new("UICorner", delayBox).CornerRadius = UDim.new(0, 6)
+
+-- Tombol apply
+local applyDelayBtn = Instance.new("TextButton", setTab)
+applyDelayBtn.Size = UDim2.new(0, 80, 0, 28)
+applyDelayBtn.Position = UDim2.new(0, 130, 0, 185)
+applyDelayBtn.Text = "Apply"
+applyDelayBtn.BackgroundColor3 = Color3.fromRGB(60, 0, 100)
+applyDelayBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+applyDelayBtn.Font = Enum.Font.GothamBold
+applyDelayBtn.TextSize = 14
+Instance.new("UICorner", applyDelayBtn).CornerRadius = UDim.new(0, 6)
+
+-- Fungsi tombol apply
+applyDelayBtn.MouseButton1Click:Connect(function()
+    local val = tonumber(delayBox.Text)
+    if val and val > 0 then
+        customDelay = val
+        delayTitle.Text = string.format("🎣 Custom Fishing Delay: %.2f", val)
+        delayTitle.TextColor3 = Color3.fromRGB(120, 255, 120)
+        print("[Settings] Custom delay diset ke:", val)
+    else
+        customDelay = nil
+        delayTitle.Text = "🎣 Custom Fishing Delay (pakai default)"
+        delayTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+        print("[Settings] Delay invalid, kembali ke default")
+    end
+end)
+
+-- =========================
+-- MISC TAB 
+-- =========================
+local MiscTab = contents["Misc"]
+
+local miscLayout = Instance.new("UIListLayout", MiscTab)
+miscLayout.SortOrder = Enum.SortOrder.LayoutOrder
+miscLayout.Padding = UDim.new(0, 10)
+miscLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+miscLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    MiscTab.CanvasSize = UDim2.new(0, 0, 0, miscLayout.AbsoluteContentSize.Y + 20)
+end)
+
+-- =========================================================
+-- Rods Shop
+-- =========================================================
+local rods = {
+    ["Luck Rod"]   = {id = 79,  price = "350 Coins"},
+    ["Carbon Rod"] = {id = 76,  price = "900 Coins"},
+    ["Grass Rod"]  = {id = 85,  price = "1.5k Coins"},
+    ["Astral Rod"] = {id = 5,   price = "1M Coins"},
+    ["Ares Rod"]   = {id = 126, price = "3M Coins"},
+    ["Angler Rod"] = {id = 168, price = "8M Coins"},
+    ["Midnight Rod"] = {id = 80, price = "50k Coins"},
+}
+
+local rodBtn = Instance.new("TextButton", MiscTab)
+rodBtn.Size = UDim2.new(1, 0, 0, 30)
+rodBtn.Text = "🎣 Select Rod"
+rodBtn.BackgroundColor3 = Color3.fromRGB(40,0,80)
+rodBtn.TextColor3 = Color3.fromRGB(255,255,255)
+rodBtn.Font = Enum.Font.GothamBold
+rodBtn.TextSize = 14
+Instance.new("UICorner", rodBtn).CornerRadius = UDim.new(0,6)
+
+local rodFrame = Instance.new("Frame", MiscTab)
+rodFrame.Size = UDim2.new(1, -20, 0, 120)
+rodFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+rodFrame.Visible = false
+Instance.new("UICorner", rodFrame).CornerRadius = UDim.new(0,6)
+
+local rodScroll = Instance.new("ScrollingFrame", rodFrame)
+rodScroll.Size = UDim2.new(1, 0, 1, 0)
+rodScroll.CanvasSize = UDim2.new(0,0,0,0)
+rodScroll.ScrollBarThickness = 4
+rodScroll.BackgroundTransparency = 1
+
+local rodLayout = Instance.new("UIListLayout", rodScroll)
+rodLayout.Padding = UDim.new(0,3)
+
+local function refreshRodList()
+    for _, c in ipairs(rodScroll:GetChildren()) do
+        if c:IsA("TextButton") then c:Destroy() end
+    end
+    local count = 0
+    for name, data in pairs(rods) do
+        count += 1
+        local btn = Instance.new("TextButton", rodScroll)
+        btn.Size = UDim2.new(1, -5, 0, 25)
+        btn.Text = name .. " (" .. data.price .. ")"
+        btn.BackgroundColor3 = Color3.fromRGB(60,0,100)
+        btn.TextColor3 = Color3.fromRGB(255,255,255)
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = 13
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0,4)
+
+        btn.MouseButton1Click:Connect(function()
+            local rodRemote = net:WaitForChild("RF/PurchaseFishingRod")
+            pcall(function() rodRemote:InvokeServer(data.id) end)
+        end)
+    end
+    rodScroll.CanvasSize = UDim2.new(0,0,0,count*28)
+end
+
+rodBtn.MouseButton1Click:Connect(function()
+    rodFrame.Visible = not rodFrame.Visible
+    if rodFrame.Visible then refreshRodList() end
+end)
+
+-- =========================================================
+-- Bait Shop
+-- =========================================================
+local baits = {
+    ["TopWater Bait (100 Coins)"] = 10,
+    ["Lucky Bait (1k Coins)"]     = 2,
+    ["Midnight Bait (3k Coins)"]  = 3,
+    ["Chroma Bait (290k Coins)"]  = 6,
+    ["Dark Mater Bait (630k)"]    = 8,
+    ["Corrupt Bait (1.15M)"]      = 15,
+    ["Aether Bait (3.7M)"]        = 16,
+}
+
+local baitBtn = Instance.new("TextButton", MiscTab)
+baitBtn.Size = UDim2.new(1, 0, 0, 30)
+baitBtn.Text = "🪱 Select Bait"
+baitBtn.BackgroundColor3 = Color3.fromRGB(40,0,80)
+baitBtn.TextColor3 = Color3.fromRGB(255,255,255)
+baitBtn.Font = Enum.Font.GothamBold
+baitBtn.TextSize = 14
+Instance.new("UICorner", baitBtn).CornerRadius = UDim.new(0,6)
+
+local baitFrame = Instance.new("Frame", MiscTab)
+baitFrame.Size = UDim2.new(1, -20, 0, 120)
+baitFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+baitFrame.Visible = false
+Instance.new("UICorner", baitFrame).CornerRadius = UDim.new(0,6)
+
+local baitScroll = Instance.new("ScrollingFrame", baitFrame)
+baitScroll.Size = UDim2.new(1, 0, 1, 0)
+baitScroll.CanvasSize = UDim2.new(0,0,0,0)
+baitScroll.ScrollBarThickness = 4
+baitScroll.BackgroundTransparency = 1
+
+local baitLayout = Instance.new("UIListLayout", baitScroll)
+baitLayout.Padding = UDim.new(0,3)
+
+local function refreshBaitList()
+    for _, c in ipairs(baitScroll:GetChildren()) do
+        if c:IsA("TextButton") then c:Destroy() end
+    end
+    local count = 0
+    for name, id in pairs(baits) do
+        count += 1
+        local btn = Instance.new("TextButton", baitScroll)
+        btn.Size = UDim2.new(1, -5, 0, 25)
+        btn.Text = name
+        btn.BackgroundColor3 = Color3.fromRGB(60,0,100)
+        btn.TextColor3 = Color3.fromRGB(255,255,255)
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = 13
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0,4)
+
+        btn.MouseButton1Click:Connect(function()
+            local RFPurchaseBait = net:WaitForChild("RF/PurchaseBait")
+            pcall(function() RFPurchaseBait:InvokeServer(id) end)
+        end)
+    end
+    baitScroll.CanvasSize = UDim2.new(0,0,0,count*28)
+end
+
+baitBtn.MouseButton1Click:Connect(function()
+    baitFrame.Visible = not baitFrame.Visible
+    if baitFrame.Visible then refreshBaitList() end
+end)
+
+
+-- =========================================================
+-- Teleport to Player
+-- =========================================================
+local LocalPlayer = game.Players.LocalPlayer
+local Players = game:GetService("Players")
+
+local function teleportToPlayerExact(username)
+    local target = Players:FindFirstChild(username)
+    if target and target.Character and LocalPlayer.Character then
+        local myHRP = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
+        if myHRP and targetHRP then
+            myHRP.CFrame = targetHRP.CFrame + Vector3.new(2, 0, 0)
+            print("✅ Teleported to " .. target.DisplayName)
+        end
+    end
+end
+local playerDropdownBtn = Instance.new("TextButton", MiscTab)
+playerDropdownBtn.Size = UDim2.new(1, 0, 0, 30)
+playerDropdownBtn.Text = "🌀 Teleport to Player"
+playerDropdownBtn.BackgroundColor3 = Color3.fromRGB(40,0,80) 
+playerDropdownBtn.TextColor3 = Color3.fromRGB(255,255,255)
+playerDropdownBtn.Font = Enum.Font.GothamBold
+playerDropdownBtn.TextSize = 14
+Instance.new("UICorner", playerDropdownBtn).CornerRadius = UDim.new(0,6)
+
+local popupFrame = Instance.new("Frame", MiscTab)
+popupFrame.Size = UDim2.new(1, -20, 0, 120)
+popupFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+popupFrame.Visible = false
+Instance.new("UICorner", popupFrame).CornerRadius = UDim.new(0,6)
+
+local scrolling = Instance.new("ScrollingFrame", popupFrame)
+scrolling.Size = UDim2.new(1, 0, 1, 0)
+scrolling.CanvasSize = UDim2.new(0,0,0,0)
+scrolling.ScrollBarThickness = 4
+scrolling.BackgroundTransparency = 1
+
+local popupLayout = Instance.new("UIListLayout", scrolling)
+popupLayout.Padding = UDim.new(0,3)
+
+local function refreshPlayerList()
+    for _, child in ipairs(scrolling:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    local count = 0
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            count += 1
+            local btn = Instance.new("TextButton", scrolling)
+            btn.Size = UDim2.new(1, -5, 0, 25)
+            btn.Text = p.DisplayName
+            btn.BackgroundColor3 = Color3.fromRGB(60,0,100) 
+            btn.TextColor3 = Color3.fromRGB(255,255,255)
+            btn.Font = Enum.Font.Gotham
+            btn.TextSize = 13
+            Instance.new("UICorner", btn).CornerRadius = UDim.new(0,4)
+
+            btn.MouseButton1Click:Connect(function()
+                teleportToPlayerExact(p.Name)
+                popupFrame.Visible = false
+            end)
+        end
+    end
+    scrolling.CanvasSize = UDim2.new(0,0,0,count * 28)
+end
+
+playerDropdownBtn.MouseButton1Click:Connect(function()
+    popupFrame.Visible = not popupFrame.Visible
+    if popupFrame.Visible then refreshPlayerList() end
+end)
+Players.PlayerAdded:Connect(refreshPlayerList)
+Players.PlayerRemoving:Connect(refreshPlayerList)
+
+
+local bottomSpacer = Instance.new("Frame", MiscTab)
+bottomSpacer.Size = UDim2.new(1, 0, 0, 40)
+bottomSpacer.BackgroundTransparency = 1
+bottomSpacer.LayoutOrder = 999
+
+-- =========================================================
+-- TRADE TAB CONTENT
+-- =========================================================
+local tradeFrame = contents["Trade"]
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+local net = ReplicatedStorage:FindFirstChild("Packages")
+    and ReplicatedStorage.Packages:FindFirstChild("_Index")
+    and ReplicatedStorage.Packages._Index:FindFirstChild("sleitnick_net@0.2.0")
+    and ReplicatedStorage.Packages._Index["sleitnick_net@0.2.0"]:FindFirstChild("net")
+
+-- =========================================================
+-- TARGET BOX 
+-- =========================================================
+local targetBox = Instance.new("TextBox", tradeFrame)
+targetBox.Size = UDim2.new(1, -20, 0, 30)
+targetBox.Position = UDim2.new(0, 10, 0, 10)
+targetBox.PlaceholderText = "Enter target username"
+targetBox.Text = ""
+targetBox.BackgroundColor3 = Color3.fromRGB(60, 0, 100)
+targetBox.TextColor3 = Color3.fromRGB(255,255,255)
+targetBox.Font = Enum.Font.Gotham
+targetBox.TextSize = 14
+Instance.new("UICorner", targetBox).CornerRadius = UDim.new(0,6)
+
+-- =========================================================
+-- TELEPORT BUTTON
+-- =========================================================
+local teleportBtn = Instance.new("TextButton", tradeFrame)
+teleportBtn.Size = UDim2.new(1, -20, 0, 30)
+teleportBtn.Position = UDim2.new(0, 10, 0, 50)
+teleportBtn.Text = "Teleport to Player"
+teleportBtn.BackgroundColor3 = Color3.fromRGB(40,0,80)
+teleportBtn.TextColor3 = Color3.fromRGB(255,255,255)
+teleportBtn.Font = Enum.Font.GothamBold
+teleportBtn.TextSize = 14
+Instance.new("UICorner", teleportBtn).CornerRadius = UDim.new(0,6)
+
+local function teleportToPlayer(username)
+    local target = Players:FindFirstChild(username)
+    if target and target.Character and LocalPlayer.Character then
+        local myHRP = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
+        if myHRP and targetHRP then
+            myHRP.CFrame = targetHRP.CFrame + Vector3.new(2,0,0)
+            print("✅ Teleported to "..target.DisplayName)
+        end
+    end
+end
+
+teleportBtn.MouseButton1Click:Connect(function()
+    local name = targetBox.Text
+    if name ~= "" then
+        teleportToPlayer(name)
+    else
+        warn("Please enter a target username!")
+    end
+end)
+
+-- =========================================================
+-- TRADE FUNCTIONALITY
+-- =========================================================
+local tradeActive = false
+local selectedItems = {}
+local isSending = false
+local stopSending = false
+local totalSelected, successCount, failCount = 0,0,0
+
+local function getRemote(pathTable)
+    local node = ReplicatedStorage
+    for _, name in ipairs(pathTable) do
+        local ok, found = pcall(function() return node:FindFirstChild(name) end)
+        if not ok or not found then return nil end
+        node = found
+    end
+    return node
+end
+
+local RF_CanSendTrade     = getRemote({"RF", "CanSendTrade"})
+local RF_InitiateTrade    = getRemote({"RF", "InitiateTrade"})
+
+if net then
+    RF_CanSendTrade  = RF_CanSendTrade  or net:FindFirstChild("RF/CanSendTrade")
+    RF_InitiateTrade = RF_InitiateTrade or net:FindFirstChild("RF/InitiateTrade")
+end
+
+local function trySendTrade(targetUserId, uuid)
+    if not targetUserId or not uuid then
+        return false, "missing_args"
+    end
+
+    if RF_CanSendTrade then
+        local ok, canSend = pcall(function()
+            return RF_CanSendTrade:InvokeServer(targetUserId)
+        end)
+        if not ok or not canSend then
+            return false, "cannot_send"
+        end
+    end
+
+    local okInit, res = pcall(function()
+        return RF_InitiateTrade:InvokeServer(targetUserId, uuid)
+    end)
+    if not okInit or not res then
+        return false, "initiate_failed"
+    end
+
+    return true, "sent"
+end
+
+local tradeBtn = Instance.new("TextButton", tradeFrame)
+tradeBtn.Size = UDim2.new(1, -20, 0, 30)
+tradeBtn.Position = UDim2.new(0,10,0,90)
+tradeBtn.Text = "Enable Trade Mode"
+tradeBtn.BackgroundColor3 = Color3.fromRGB(40,0,80)
+tradeBtn.TextColor3 = Color3.fromRGB(255,255,255)
+tradeBtn.Font = Enum.Font.GothamBold
+tradeBtn.TextSize = 14
+Instance.new("UICorner", tradeBtn).CornerRadius = UDim.new(0,6)
+
+tradeBtn.MouseButton1Click:Connect(function()
+    tradeActive = not tradeActive
+    if tradeActive then
+        tradeBtn.BackgroundColor3 = Color3.fromRGB(0,150,0)
+        tradeBtn.Text = "Disable Trade Mode"
+    else
+        tradeBtn.BackgroundColor3 = Color3.fromRGB(40,0,80)
+        tradeBtn.Text = "Enable Trade Mode"
+    end
+end)
+
+local sendBtn = Instance.new("TextButton", tradeFrame)
+sendBtn.Size = UDim2.new(1, -20, 0, 30)
+sendBtn.Position = UDim2.new(0,10,0,130)
+sendBtn.Text = "Send Selected Items"
+sendBtn.BackgroundColor3 = Color3.fromRGB(40,0,80)
+sendBtn.TextColor3 = Color3.fromRGB(255,255,255)
+sendBtn.Font = Enum.Font.GothamBold
+sendBtn.TextSize = 14
+Instance.new("UICorner", sendBtn).CornerRadius = UDim.new(0,6)
+
+local stopBtn = Instance.new("TextButton", tradeFrame)
+stopBtn.Size = UDim2.new(1, -20, 0, 30)
+stopBtn.Position = UDim2.new(0,10,0,170)
+stopBtn.Text = "Stop Sending"
+stopBtn.BackgroundColor3 = Color3.fromRGB(40,0,80)
+stopBtn.TextColor3 = Color3.fromRGB(255,255,255)
+stopBtn.Font = Enum.Font.GothamBold
+stopBtn.TextSize = 14
+Instance.new("UICorner", stopBtn).CornerRadius = UDim.new(0,6)
+
+local statusLabel = Instance.new("TextLabel", tradeFrame)
+statusLabel.Size = UDim2.new(1,-20,0,40)
+statusLabel.Position = UDim2.new(0,10,0,210)
+statusLabel.BackgroundTransparency = 1
+statusLabel.TextColor3 = Color3.fromRGB(255,255,200)
+statusLabel.TextWrapped = true
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.TextSize = 14
+statusLabel.TextXAlignment = Enum.TextXAlignment.Center
+statusLabel.TextYAlignment = Enum.TextYAlignment.Center
+statusLabel.Text = "0/0"
+
+local function updateStatus()
+    statusLabel.Text = string.format("%d/%d", successCount, totalSelected)
+end
+
+local function getTargetUserId()
+    local name = targetBox.Text
+    local p = Players:FindFirstChild(name)
+    return p and p.UserId or nil
+end
+
+sendBtn.MouseButton1Click:Connect(function()
+    if isSending then return end
+    if #selectedItems == 0 then
+        warn("No items selected to send.")
+        return
+    end
+
+    local targetUserId = getTargetUserId()
+    if not targetUserId then
+        warn("Target player not found!")
+        return
+    end
+
+    sendBtn.BackgroundColor3 = Color3.fromRGB(0,150,0)
+    sendBtn.Text = "Sending..."
+    totalSelected = #selectedItems
+    successCount, failCount = 0,0
+    updateStatus()
+
+    isSending = true
+    stopSending = false
+    stopBtn.Text = "Stop Sending"
+
+    task.spawn(function()
+        for _, uuid in ipairs(selectedItems) do
+            if stopSending then break end
+
+            local success, _ = trySendTrade(targetUserId, uuid)
+            if success then successCount += 1 else failCount += 1 end
+            updateStatus()
+
+            local waitTime = 6
+            local elapsed = 0
+            while elapsed < waitTime do
+                if stopSending then break end
+                task.wait(0.1)
+                elapsed += 0.1
+            end
+        end
+
+        selectedItems = {}
+        isSending = false
+        stopBtn.Text = "Stop Sending"
+        sendBtn.BackgroundColor3 = Color3.fromRGB(0,150,0)
+        sendBtn.Text = "Send Selected Items"
+    end)
+end)
+
+stopBtn.MouseButton1Click:Connect(function()
+    if isSending then
+        stopSending = true
+        stopBtn.Text = "Stopping..."
+    end
+end)
+
+-- =========================================================
+-- HOOK EQUIP ITEM (Tambahan)
+-- =========================================================
+local ok_mt, mt = pcall(getrawmetatable, game)
+if ok_mt and mt and mt.__namecall then
+    local oldNamecall = mt.__namecall
+    setreadonly(mt,false)
+    mt.__namecall = newcclosure(function(self,...)
+        local args = {...}
+        local method = getnamecallmethod()
+        if tradeActive and tostring(self) == "RE/EquipItem" and method == "FireServer" then
+            local uuid = args[1]
+            if uuid then
+                table.insert(selectedItems, uuid)
+                print("🟣 Item selected:", uuid)
+            end
+            return nil
+        end
+        return oldNamecall(self, unpack(args))
+    end)
+    setreadonly(mt,true)
+else
+    warn("getrawmetatable or __namecall not available.")
+end
+
+-- =========================================================
+-- WEBHOOK TAB CONTENT + FUNCTION
+-- =========================================================
+local webhookFrame = contents["Webhook"]
+
+local webhookLabel = Instance.new("TextLabel", webhookFrame)
+webhookLabel.Size = UDim2.new(1, -20, 0, 20)
+webhookLabel.Position = UDim2.new(0, 10, 0, 0)
+webhookLabel.BackgroundTransparency = 1
+webhookLabel.TextColor3 = Color3.fromRGB(200,200,255)
+webhookLabel.Text = "Webhook URL:"
+webhookLabel.Font = Enum.Font.GothamBold
+webhookLabel.TextSize = 14
+webhookLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local webhookBox = Instance.new("TextBox", webhookFrame)
+webhookBox.Size = UDim2.new(1, -20, 0, 30)
+webhookBox.Position = UDim2.new(0, 10, 0, 25)
+webhookBox.PlaceholderText = "Enter Discord webhook URL"
+webhookBox.Text = ""
+webhookBox.BackgroundColor3 = Color3.fromRGB(60, 0, 100)
+webhookBox.TextColor3 = Color3.fromRGB(255,255,255)
+webhookBox.Font = Enum.Font.Gotham
+webhookBox.TextSize = 14
+Instance.new("UICorner", webhookBox).CornerRadius = UDim.new(0,6)
+
+local toggleBtn = Instance.new("TextButton", webhookFrame)
+toggleBtn.Size = UDim2.new(1, -20, 0, 30)
+toggleBtn.Position = UDim2.new(0, 10, 0, 70)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 80)
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 14
+toggleBtn.Text = "Start Webhook"
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 6)
+
+-- =========================================================
+-- FUNCTION: Webhook Logic
+-- =========================================================
+local TextChatService = game:GetService("TextChatService")
+local HttpService = game:GetService("HttpService")
+
+local running = false
+local connection = nil
+
+local function StripTags(str)
+    return str:gsub("<[^>]->", "")
+end
+
+local function SendMessageToWebhook(url, message)
+    if not url or url == "" then return end
+    local data = { content = message }
+    local json = HttpService:JSONEncode(data)
+    request({
+        Url = url,
+        Method = "POST",
+        Headers = { ["Content-Type"] = "application/json" },
+        Body = json
+    })
+end
+
+local function StartWebhook(url)
+    if running then return end
+    running = true
+    print("[Webhook] Listening to RBXGeneral...")
+
+    connection = TextChatService.MessageReceived:Connect(function(msg)
+        if not running then return end
+
+        local channel = msg.TextChannel and msg.TextChannel.Name or "Unknown"
+        if channel ~= "RBXGeneral" then return end
+
+        local text = msg.Text or ""
+        local cleanText = StripTags(text)
+
+        local r,g,b = string.match(text, '<font color="rgb%(([%d]+),%s*([%d]+),%s*([%d]+)%)">')
+        if r then
+            r,g,b = tonumber(r), tonumber(g), tonumber(b)
+            local isRed = (r == 255 and g == 25 and b == 25)
+            local isGreen = (r == 24 and g == 255 and b == 152)
+            if isRed or isGreen then
+                SendMessageToWebhook(url, cleanText)
+            end
+        end
+    end)
+end
+
+local function StopWebhook()
+    if not running then return end
+    running = false
+    if connection then
+        connection:Disconnect()
+        connection = nil
+    end
+    print("[Webhook] Stopped listening.")
+end
+
+-- =========================================================
+-- TOGGLE BUTTON LOGIC
+-- =========================================================
+toggleBtn.MouseButton1Click:Connect(function()
+    if not running then
+        local url = webhookBox.Text
+        if url == "" then
+            warn("Masukkan webhook URL dulu!")
+            return
+        end
+        StartWebhook(url)
+        toggleBtn.Text = "Stop Webhook"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+    else
+        StopWebhook()
+        toggleBtn.Text = "Start Webhook"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 80)
+    end
+end)
+
+
+local function hidenitop()
+    local player = game.Players.LocalPlayer
+    local gui = player:WaitForChild("PlayerGui")
+
+    local function removeNotification(child)
+        if child:IsA("ScreenGui") and child.Name:lower():find("notification") then
+            task.defer(function()
+                task.wait(0.02)
+                if child.Parent then
+                    child:Destroy()
+                end
+            end)
+        end
+    end
+
+    for _, child in pairs(gui:GetChildren()) do
+        removeNotification(child)
+    end
+
+    gui.ChildAdded:Connect(removeNotification)
+end
+
+local function RemoveAllEffects()
+    local function isEffect(obj)
+        return obj:IsA("ParticleEmitter")
+            or obj:IsA("Trail")
+            or obj:IsA("Beam")
+            or obj:IsA("Smoke")
+            or obj:IsA("Fire")
+            or obj:IsA("Sparkles")
+            or obj:IsA("Explosion")
+            or obj:IsA("Light")
+    end
+
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if isEffect(obj) then
+            pcall(function()
+                obj:Destroy()
+            end)
+        end
+    end
+
+    workspace.DescendantAdded:Connect(function(obj)
+        if isEffect(obj) then
+            task.defer(function()
+                pcall(function()
+                    obj:Destroy()
+                end)
+            end)
+        end
+    end)
+end
+
+
+task.delay(5, function()
+    if teleportActions["Ocean"] then
+        RemoveAllEffects()
+        hidenitop()
+        teleportActions["Ocean"]()
+        task.wait(5)
+        startFishing(statusLabel)
+    end
+end)
+
+
+
+local VirtualUser = game:GetService("VirtualUser")
+
+game:GetService("Players").LocalPlayer.Idled:Connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
+end)
