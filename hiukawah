@@ -759,6 +759,20 @@ tpLabel.Font = Enum.Font.Gotham
 tpLabel.TextSize = 14
 
 -- =========================================================
+-- TELEPORT TAB (Auto Generate)
+-- =========================================================
+local tpTab = contents["Teleport"]
+
+local tpLabel = Instance.new("TextLabel", tpTab)
+tpLabel.Size = UDim2.new(1, 0, 0, 25)
+tpLabel.Position = UDim2.new(0, 0, 0, 10)
+tpLabel.Text = "Teleport to:"
+tpLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
+tpLabel.BackgroundTransparency = 1
+tpLabel.Font = Enum.Font.Gotham
+tpLabel.TextSize = 14
+
+-- =========================================================
 -- DAFTAR TEMPAT TELEPORT
 -- =========================================================
 local teleportLocations = {
@@ -770,7 +784,7 @@ local teleportLocations = {
         {pos = Vector3.new(2159.0, -91.3, -727.2), lookDir = Vector3.new(-0.94, 0.00, 0.35)},
         {pos = Vector3.new(2140.7, -91.2, -698.7), lookDir = Vector3.new(-0.01, -0.00, -1.00)},
     },
-    ["Secret Temple"] = {
+    ["Secred Temple"] = {
         {pos = Vector3.new(1452.2, -22.1, -622.2), lookDir = Vector3.new(0.22, 0.00, 0.98)},
         {pos = Vector3.new(1506.3, -22.1, -628.1), lookDir = Vector3.new(0.15, 0.00, 0.99)},
         {pos = Vector3.new(1503.4, -22.1, -640.7), lookDir = Vector3.new(-0.12, -0.00, -0.99)},
@@ -783,12 +797,12 @@ local teleportLocations = {
         {pos = Vector3.new(-1600.6, 19.4, 1900.2), lookDir = Vector3.new(-0.54, 0.00, 0.84)},
         {pos = Vector3.new(-1572.5, 13.1, 1921.8), lookDir = Vector3.new(0.17, -0.00, 0.99)},
     },
-    ["Hallowen"] = {
-        {pos = Vector3.new(2165.2, 148.0, 3342.1), lookDir = Vector3.new(-0.71, -0.00, -0.70)},
-        {pos = Vector3.new(1856.7, 1.7, 2909.4), lookDir = Vector3.new(-0.08, 0.00, 1.00)},
-        {pos = Vector3.new(1592.7, 3.4, 3146.4), lookDir = Vector3.new(-0.68, -0.00, -0.74)},
-        {pos = Vector3.new(1678.3, 2.3, 3214.5), lookDir = Vector3.new(0.92, -0.00, -0.38)},
-        {pos = Vector3.new(2124.0, 103.5, 3339.1), lookDir = Vector3.new(0.16, 0.00, -0.99)},
+    ["AncientRuin"] = {
+        {pos = Vector3.new(6042.5, -555.3, 4454.2), lookDir = Vector3.new(-0.09, -0.00, 1.00)},
+        {pos = Vector3.new(6019.4, -553.0, 4506.8), lookDir = Vector3.new(1.00, 0.00, 0.07)},
+        {pos = Vector3.new(6029.0, -585.9, 4624.4), lookDir = Vector3.new(0.58, 0.00, 0.81)},
+        {pos = Vector3.new(6005.0, -585.9, 4652.0), lookDir = Vector3.new(0.92, 0.00, 0.39)},
+        {pos = Vector3.new(6012.3, -585.9, 4695.2), lookDir = Vector3.new(0.82, 0.00, -0.58)},
     },
     ["Sisyphus"] = {
         {pos = Vector3.new(-3713.5, -135.1, -1013.1), lookDir = Vector3.new(-0.22, -0.00, 0.98)},
@@ -858,16 +872,20 @@ local teleportLocations = {
         {pos = Vector3.new(3176.4, -1302.9, 1470.4), lookDir = Vector3.new(-0.96, 0.00, 0.26)},
         {pos = Vector3.new(3030.0, -1301.0, 1421.9), lookDir = Vector3.new(0.05, -0.00, 1.00)},
     },
-    ["Crystal Cavern"] = {
-        {pos = Vector3.new(-1609.9, -447.8, 7377.7), lookDir = Vector3.new(0.95, 0.00, 0.31)},
-        {pos = Vector3.new(-1702.7, -432.2, 7409.5), lookDir = Vector3.new(-0.28, -0.00, -0.96)},
-    },
+    ["Iron Cavern"] = {
+      {pos = Vector3.new(-8898.7, -582.0, 118.3), lookDir = Vector3.new(-0.43, 0.00, -0.90)},
+      {pos = Vector3.new(-8774.4, -570.4, 218.8), lookDir = Vector3.new(0.05, -0.00, 1.00)},
+      {pos = Vector3.new(-8785.2, -568.0, 259.2), lookDir = Vector3.new(0.97, -0.00, -0.22)},
+      {pos = Vector3.new(-8766.3, -572.0, 279.8), lookDir = Vector3.new(-0.01, -0.00, -1.00)},
+      {pos = Vector3.new(-8751.8, -580.0, 267.4), lookDir = Vector3.new(-0.54, -0.00, -0.84)},
+      {pos = Vector3.new(-8739.2, -575.0, 252.5), lookDir = Vector3.new(-1.00, -0.00, 0.01)},
+    }
 }
 
 -- =========================================================
 -- AUTO GENERATE BUTTONS
 -- =========================================================
-local teleportPriority = {"Crystal Cavern", "Ocean", "Hallowen"} 
+local teleportPriority = {"Iron Cavern", "Ocean", "AncientRuin} 
 local teleportActions = {}
 local yOffset = 40
 
