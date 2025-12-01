@@ -885,7 +885,7 @@ local teleportLocations = {
 -- =========================================================
 -- AUTO GENERATE BUTTONS
 -- =========================================================
-local teleportPriority = {"Iron Cavern", "Ocean", "AncientRuin} 
+local teleportPriority = {"Iron Cavern", "Ocean", "AncientRuin"} 
 local teleportActions = {}
 local yOffset = 40
 
