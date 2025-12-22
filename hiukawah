@@ -334,7 +334,7 @@ end
 
 local RodDelays = {
     [257] = 1.2, [258] = 1.2, [169] = 1.3, [168] = 1.4,
-    [126] = 1.5, [5] = 1.4, [80] = 1.8, [1] = 3.8
+    [126] = 1.5, [5] = 1.4, [80] = 1.8, [1] = 4.0
 }
 
 local function getRodIdFromUUID(uuid)
@@ -378,75 +378,6 @@ local function DisconnectFishListener()
     end
 end
 
-function startLegit(label)
-    if autofishActive then return end
-    autofishActive = true
-
-    AutoFishingRemote:InvokeServer(true)
-    SetupFishListener(label)
-    startAutoTap()
-end
-
-function stopLegit(label)
-    if not autofishActive then return end
-    autofishActive = false
-    statusLabel = label
-    if statusLabel then
-        statusLabel.Text = "Status: X Stopped"
-        statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
-    end
-    AutoFishingRemote:InvokeServer(false)
-    DisconnectFishListener()
-end
-
-local autoTapEnabled = false
-local tapTask
-
-function startAutoTap()
-    if autoTapEnabled then return end
-    autoTapEnabled = true
-
-    local RunService = game:GetService("RunService")
-    local Workspace = game:GetService("Workspace")
-    local VirtualInputManager = game:GetService("VirtualInputManager")
-    local UserInputService = game:GetService("UserInputService")
-
-    local camera = Workspace.CurrentCamera
-    local loopDelay = 0.1 -- kecepatan klik
-
-    -- sembunyikan kursor dan kunci di tengah
-    UserInputService.MouseIconEnabled = false
-    UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
-
-    tapTask = task.spawn(function()
-        while autoTapEnabled do
-            local x = 20
-            local y = camera.ViewportSize.Y - 100
-
-            VirtualInputManager:SendMouseButtonEvent(x, y, 0, true, game, 0)
-            task.wait(0.01)
-            VirtualInputManager:SendMouseButtonEvent(x, y, 0, false, game, 0)
-
-            task.wait(loopDelay)
-            RunService.Heartbeat:Wait()
-        end
-    end)
-end
-
-function stopAutoTap()
-    if not autoTapEnabled then return end
-    autoTapEnabled = false
-
-    local UserInputService = game:GetService("UserInputService")
-    UserInputService.MouseIconEnabled = true
-    UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-
-    if tapTask then
-        task.cancel(tapTask)
-        tapTask = nil
-    end
-end
-
 local function startFishing(statusLabel)
     if autofish then return end
     autofish, stopping = true, false
@@ -479,6 +410,9 @@ local function startFishing(statusLabel)
         local uuid = getBestRodUUID()
         local rodId = getRodIdFromUUID(uuid)
         local DelayRods = customDelay or RodDelays[rodId] or 3.4
+		local function scaleDelay(baseDelay, percent)
+			return math.max(baseDelay * (percent / 100), 0.6)
+		end
 
 
         while autofish do
@@ -488,7 +422,8 @@ local function startFishing(statusLabel)
 
             miniGameRemote:InvokeServer(-1.25, 1, timestamp)
             local baitConn = baitRemote.OnClientEvent:Connect(function() end)
-            task.wait(DelayRods)
+
+			task.wait(scaleDelay(DelayRods, 60))
 
             baitConn:Disconnect()
             finishRemote:FireServer()
@@ -515,8 +450,6 @@ local function startFishing(statusLabel)
         end
     end)
 end
-
-
 
 local function stopFishing(statusLabel)
     if autofish then
@@ -716,24 +649,8 @@ createButton("🎣 Start / Stop Fishing", 40, function()
     end
 end, autoTab)
 
-createButton("⚡ Start / Stop Legit", 80, function()
-    legitActive = not legitActive
 
-    if legitActive then
-        EquipBestFishingRod(statusLabel)
-        task.wait(0.5)
-        equipRemote:FireServer(1)
-        task.wait(0.25)
-        startLegit(statusLabel)
-    else
-        stopLegit(statusLabel)
-    end
-end, autoTab)
-createButton("X Stop AutoTAP", 120, function()
-    stopAutoTap()
-end, autoTab)
-
-createButton("Auto Grinding ON/OFF", 160, function()
+createButton("Auto Grinding ON/OFF", 80, function()
     if autofish then
         stopping = true
         statusLabel.Text = "Status: ⏳ Stopping..."
@@ -745,21 +662,7 @@ end, autoTab)
 
 
 -- =========================================================
--- TELEPORT TAB (Auto Generate)
--- =========================================================
-local tpTab = contents["Teleport"]
-
-local tpLabel = Instance.new("TextLabel", tpTab)
-tpLabel.Size = UDim2.new(1, 0, 0, 25)
-tpLabel.Position = UDim2.new(0, 0, 0, 10)
-tpLabel.Text = "Teleport to:"
-tpLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
-tpLabel.BackgroundTransparency = 1
-tpLabel.Font = Enum.Font.Gotham
-tpLabel.TextSize = 14
-
--- =========================================================
--- TELEPORT TAB (Auto Generate)
+-- TELEPORT TAB 
 -- =========================================================
 local tpTab = contents["Teleport"]
 
@@ -872,20 +775,16 @@ local teleportLocations = {
         {pos = Vector3.new(3176.4, -1302.9, 1470.4), lookDir = Vector3.new(-0.96, 0.00, 0.26)},
         {pos = Vector3.new(3030.0, -1301.0, 1421.9), lookDir = Vector3.new(0.05, -0.00, 1.00)},
     },
-    ["Iron Cavern"] = {
-      {pos = Vector3.new(-8898.7, -582.0, 118.3), lookDir = Vector3.new(-0.43, 0.00, -0.90)},
-      {pos = Vector3.new(-8774.4, -570.4, 218.8), lookDir = Vector3.new(0.05, -0.00, 1.00)},
-      {pos = Vector3.new(-8785.2, -568.0, 259.2), lookDir = Vector3.new(0.97, -0.00, -0.22)},
-      {pos = Vector3.new(-8766.3, -572.0, 279.8), lookDir = Vector3.new(-0.01, -0.00, -1.00)},
-      {pos = Vector3.new(-8751.8, -580.0, 267.4), lookDir = Vector3.new(-0.54, -0.00, -0.84)},
-      {pos = Vector3.new(-8739.2, -575.0, 252.5), lookDir = Vector3.new(-1.00, -0.00, 0.01)},
+    ["Christmas Island"] = {
+      {pos = Vector3.new(1134.9, 24.1, 1557.3), lookDir = Vector3.new(0.85, 0.00, -0.52)},
+      {pos = Vector3.new(1163.5, 23.9, 1573.8), lookDir = Vector3.new(-0.34, 0.00, -0.94)},
     }
 }
 
 -- =========================================================
 -- AUTO GENERATE BUTTONS
 -- =========================================================
-local teleportPriority = {"Iron Cavern", "Ocean", "AncientRuin"} 
+local teleportPriority = {"Christmas Island", "Ocean", "AncientRuin"} 
 local teleportActions = {}
 local yOffset = 40
 
@@ -1100,12 +999,12 @@ end)
 -- Rods Shop
 -- =========================================================
 local rods = {
+    ["Angler Rod"] = {id = 168, price = "8M Coins"},
     ["Luck Rod"]   = {id = 79,  price = "350 Coins"},
     ["Carbon Rod"] = {id = 76,  price = "900 Coins"},
     ["Grass Rod"]  = {id = 85,  price = "1.5k Coins"},
     ["Astral Rod"] = {id = 5,   price = "1M Coins"},
     ["Ares Rod"]   = {id = 126, price = "3M Coins"},
-    ["Angler Rod"] = {id = 168, price = "8M Coins"},
     ["Midnight Rod"] = {id = 80, price = "50k Coins"},
 }
 
@@ -1166,6 +1065,8 @@ end)
 -- Bait Shop
 -- =========================================================
 local baits = {
+    ["Singularity Bait (8.2M)"]   = 3,
+    ["Floral Bait (4M)"]          = 20,
     ["TopWater Bait (100 Coins)"] = 10,
     ["Lucky Bait (1k Coins)"]     = 2,
     ["Midnight Bait (3k Coins)"]  = 3,
