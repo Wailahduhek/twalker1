@@ -56,7 +56,7 @@ header.BackgroundTransparency = 1
 local title = Instance.new("TextLabel", header)
 title.Size = UDim2.new(1, -90, 1, 0)
 title.Position = UDim2.new(0, 10, 0, 0) 
-title.Text = "T-Walker 3.3"
+title.Text = "T-Walker Fast"
 title.TextColor3 = Color3.fromRGB(200, 200, 255)
 title.TextXAlignment = Enum.TextXAlignment.Left 
 title.BackgroundTransparency = 1
@@ -184,7 +184,7 @@ minimizeBtn.MouseButton1Click:Connect(function()
         title.AnchorPoint = Vector2.new(0, 0)
         title.Position = UDim2.new(0, 10, 0, 0)
         title.Size = UDim2.new(1, -90, 1, 0)
-        title.Text = "T-Walker 3.3"
+        title.Text = "T-Walker Fast"
         title.TextColor3 = Color3.fromRGB(200, 200, 255)
         title.TextXAlignment = Enum.TextXAlignment.Left
         title.BackgroundTransparency = 1
@@ -209,7 +209,7 @@ restoreButton.MouseButton1Click:Connect(function()
         title.AnchorPoint = Vector2.new(0, 0)
         title.Position = UDim2.new(0, 10, 0, 0)
         title.Size = UDim2.new(1, -90, 1, 0)
-        title.Text = "T-Walker 3.3"
+        title.Text = "T-Walker Fast"
         title.TextColor3 = Color3.fromRGB(200, 200, 255)
         title.TextXAlignment = Enum.TextXAlignment.Left
         title.BackgroundTransparency = 1
@@ -378,6 +378,323 @@ local function DisconnectFishListener()
     end
 end
 
+-- =========================================================
+-- REMOTES BLATAN
+-- =========================================================
+
+local RE_EquipToolFromHotbar           = net:WaitForChild("RE/EquipToolFromHotbar")
+local RF_ChargeFishingRod              = net:WaitForChild("RF/ChargeFishingRod")
+local RF_RequestFishingMinigameStarted = net:WaitForChild("RF/RequestFishingMinigameStarted")
+local RE_FishingCompleted              = net:WaitForChild("RE/FishingCompleted")
+local RF_CancelFishingInputs           = net:WaitForChild("RF/CancelFishingInputs")
+local RF_UpdateAutoFishingState        = net:WaitForChild("RF/UpdateAutoFishingState")
+
+local FishingRemotes = {
+    RE_EquipToolFromHotbar,
+    RF_ChargeFishingRod,
+    RF_RequestFishingMinigameStarted,
+    RE_FishingCompleted,
+    RF_CancelFishingInputs,
+    RF_UpdateAutoFishingState,
+}
+
+local function checkFishingRemotes()
+    for _, remote in ipairs(FishingRemotes) do
+        if not remote then
+            return false
+        end
+    end
+    return true
+end
+
+-- =========================================================
+-- 1. KILLER 
+-- =========================================================
+task.spawn(function()
+    local ok, FishingController = pcall(function()
+        return require(game:GetService("ReplicatedStorage").Controllers.FishingController)
+    end)
+
+    if not ok or not FishingController then return end
+
+    local OldCharge = FishingController.RequestChargeFishingRod
+    local OldCast   = FishingController.SendFishingRequestToServer
+
+    FishingController.RequestChargeFishingRod = function(...)
+        if _G.twalker then
+            return
+        end
+        return OldCharge(...)
+    end
+
+    FishingController.SendFishingRequestToServer = function(...)
+        if _G.twalker then
+            return false
+        end
+        return OldCast(...)
+    end
+end)
+
+-- =========================================================
+-- 2. REMOTE KILLER
+-- =========================================================
+local mt = getrawmetatable(game)
+local oldNamecall = mt.__namecall
+
+setreadonly(mt, false)
+
+mt.__namecall = newcclosure(function(self, ...)
+    local method = getnamecallmethod()
+
+    if _G.twalker and not checkcaller() then
+        if method == "InvokeServer" then
+            if self.Name == "RequestFishingMinigameStarted"
+            or self.Name == "ChargeFishingRod"
+            or self.Name == "UpdateAutoFishingState" then
+                return nil
+            end
+        end
+
+        if method == "FireServer" and self.Name == "FishingCompleted" then
+            return nil
+        end
+    end
+
+    return oldNamecall(self, ...)
+end)
+
+setreadonly(mt, true)
+
+-- =========================================================
+-- 3. NOTIFICATION KILLER
+-- =========================================================
+local function SuppressGameVisuals(active)
+    local ok, TextController = pcall(function()
+        return require(game.ReplicatedStorage.Controllers.TextNotificationController)
+    end)
+
+    if not ok or not TextController then return end
+
+    if active then
+        if not TextController._OldDeliver then
+            TextController._OldDeliver = TextController.DeliverNotification
+        end
+
+        TextController.DeliverNotification = function(self, data)
+            if data and data.Text then
+                local text = tostring(data.Text)
+                if text:find("Auto Fishing") or text:find("Reach Level") then
+                    return
+                end
+            end
+            return TextController._OldDeliver(self, data)
+        end
+    else
+        if TextController._OldDeliver then
+            TextController.DeliverNotification = TextController._OldDeliver
+            TextController._OldDeliver = nil
+        end
+    end
+end
+
+
+-- =====================
+-- CONFIG
+-- =====================
+local completeDelay = 3.1
+local cancelDelay   = 0.4
+local loopInterval  = 1.9
+
+-- =====================
+-- STATE
+-- =====================
+local blatantInstantState = false
+_G.twalker = false
+
+local blatantLoopThread
+local blatantEquipThread
+
+-- =========================================================
+--  BLATANT 
+-- =========================================================
+local function runBlatantInstant()
+    if not blatantInstantState then return end
+
+    task.spawn(function()
+        local startTime = os.clock()
+        local timestamp = os.time() + os.clock()
+
+        pcall(function()
+            RF_ChargeFishingRod:InvokeServer(timestamp)
+        end)
+
+        task.wait(0.001)
+
+        pcall(function()
+            RF_RequestFishingMinigameStarted:InvokeServer(
+                -1.25, 1, timestamp
+            )
+        end)
+
+        local remain = completeDelay - (os.clock() - startTime)
+        if remain > 0 then
+            task.wait(remain)
+        end
+
+        pcall(function()
+            RE_FishingCompleted:FireServer()
+        end)
+
+        task.wait(cancelDelay)
+
+        pcall(function()
+            RF_CancelFishingInputs:InvokeServer()
+        end)
+    end)
+end
+
+-- =========================================================
+-- START
+-- =========================================================
+local function StartBlatantFishing(statusLabel)
+    if blatantInstantState then return end
+
+    blatantInstantState = true
+    _G.twalker = true
+
+    if statusLabel then
+        statusLabel.Text = "Status: ⚡ Blatant Fishing ON"
+        statusLabel.TextColor3 = Color3.fromRGB(120, 255, 120)
+    end
+
+    pcall(function() RF_UpdateAutoFishingState:InvokeServer(true) end)
+    task.wait(0.5)
+    pcall(function() RF_UpdateAutoFishingState:InvokeServer(true) end)
+    pcall(function() RF_UpdateAutoFishingState:InvokeServer(true) end)
+
+    blatantLoopThread = task.spawn(function()
+        while blatantInstantState do
+            runBlatantInstant()
+            task.wait(loopInterval)
+        end
+    end)
+
+    blatantEquipThread = task.spawn(function()
+        while blatantInstantState do
+            pcall(function()
+                RE_EquipToolFromHotbar:FireServer(1)
+            end)
+            task.wait(0.1)
+        end
+    end)
+end
+
+-- =========================================================
+-- STOP
+-- =========================================================
+local function StopBlatantFishing(statusLabel)
+    if not blatantInstantState then return end
+
+    blatantInstantState = false
+    _G.twalker = false
+
+    if statusLabel then
+        statusLabel.Text = "Status: ✖ Blatant Fishing OFF"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 120, 120)
+    end
+
+    pcall(function()
+        RF_UpdateAutoFishingState:InvokeServer(false)
+    end)
+
+    if blatantLoopThread then
+        task.cancel(blatantLoopThread)
+        blatantLoopThread = nil
+    end
+
+    if blatantEquipThread then
+        task.cancel(blatantEquipThread)
+        blatantEquipThread = nil
+    end
+end
+
+local rodPrices = {
+    [80]  = 51000,     
+    [5]   = 1100000,   
+    [126] = 3100000,   
+    [168] = 8100000,
+}
+
+local currentRod = nil
+
+local function getRodUUIDFromInventory(rodId)
+    local rodsInventory = getFishingRods()
+    for _, rod in pairs(rodsInventory) do
+        if rod.Id == rodId then
+            return rod.UUID or rod.Id
+        end
+    end
+    return nil
+end
+
+local function buyOrEquipRod(rodId)
+    local purchaseRemote = net:WaitForChild("RF/PurchaseFishingRod")
+
+    local rodUUID = getRodUUIDFromInventory(rodId)
+    if rodUUID then
+        if currentRod ~= rodId then
+            remote:FireServer(rodUUID, "Fishing Rods")
+            currentRod = rodId
+            print("✅ Equipped rod ID " .. rodId)
+        else
+            print("ℹ️ Rod ID " .. rodId .. " sudah equipped")
+        end
+        return true
+    end
+
+    local success, err = pcall(function()
+        purchaseRemote:InvokeServer(rodId)
+    end)
+
+    if not success then
+        warn("⚠️ Failed to buy rod ID " .. rodId, err)
+        return false
+    end
+
+    task.wait(1)
+
+    rodUUID = getRodUUIDFromInventory(rodId)
+    if rodUUID then
+        remote:FireServer(rodUUID, "Fishing Rods")
+        currentRod = rodId
+        print("✅ Bought & Equipped rod ID " .. rodId)
+        return true
+    else
+        warn("⚠️ Gagal beli rod ID " .. rodId)
+        return false
+    end
+end
+
+local function AutoBuyRodPriority(money)
+    for _, rodId in ipairs(priority) do
+        local rodUUID = getRodUUIDFromInventory(rodId)
+        if rodUUID then
+            buyOrEquipRod(rodId)
+            return
+        else
+            local price = rodPrices[rodId]
+            if price and money >= price then
+                buyOrEquipRod(rodId)
+                return
+            end
+        end
+    end
+end
+
+-- =========================================================
+-- NORMAL INSTAN
+-- =========================================================
+
 local function startFishing(statusLabel)
     if autofish then return end
     autofish, stopping = true, false
@@ -459,80 +776,6 @@ local function stopFishing(statusLabel)
     else
         statusLabel.Text = "Status: ✖ Not Running"
         statusLabel.TextColor3 = Color3.fromRGB(255, 120, 120)
-    end
-end
-
-
-local rodPrices = {
-    [80]  = 51000,     
-    [5]   = 1100000,   
-    [126] = 3100000,   
-    [168] = 8100000,
-}
-
-local currentRod = nil
-
-local function getRodUUIDFromInventory(rodId)
-    local rodsInventory = getFishingRods()
-    for _, rod in pairs(rodsInventory) do
-        if rod.Id == rodId then
-            return rod.UUID or rod.Id
-        end
-    end
-    return nil
-end
-
-local function buyOrEquipRod(rodId)
-    local purchaseRemote = net:WaitForChild("RF/PurchaseFishingRod")
-
-    local rodUUID = getRodUUIDFromInventory(rodId)
-    if rodUUID then
-        if currentRod ~= rodId then
-            remote:FireServer(rodUUID, "Fishing Rods")
-            currentRod = rodId
-            print("✅ Equipped rod ID " .. rodId)
-        else
-            print("ℹ️ Rod ID " .. rodId .. " sudah equipped")
-        end
-        return true
-    end
-
-    local success, err = pcall(function()
-        purchaseRemote:InvokeServer(rodId)
-    end)
-
-    if not success then
-        warn("⚠️ Failed to buy rod ID " .. rodId, err)
-        return false
-    end
-
-    task.wait(1)
-
-    rodUUID = getRodUUIDFromInventory(rodId)
-    if rodUUID then
-        remote:FireServer(rodUUID, "Fishing Rods")
-        currentRod = rodId
-        print("✅ Bought & Equipped rod ID " .. rodId)
-        return true
-    else
-        warn("⚠️ Gagal beli rod ID " .. rodId)
-        return false
-    end
-end
-
-local function AutoBuyRodPriority(money)
-    for _, rodId in ipairs(priority) do
-        local rodUUID = getRodUUIDFromInventory(rodId)
-        if rodUUID then
-            buyOrEquipRod(rodId)
-            return
-        else
-            local price = rodPrices[rodId]
-            if price and money >= price then
-                buyOrEquipRod(rodId)
-                return
-            end
-        end
     end
 end
 
@@ -649,8 +892,19 @@ createButton("🎣 Start / Stop Fishing", 40, function()
     end
 end, autoTab)
 
+createButton("⚡ Start / Stop Blatan", 80, function()
+    fishingActive = not fishingActive
 
-createButton("Auto Grinding ON/OFF", 80, function()
+    if blatantInstantState then
+        StopBlatantFishing(statusLabel)
+    else
+        StartBlatantFishing(statusLabel)
+    end
+end, autoTab)
+
+
+
+createButton("Auto Grinding ON/OFF", 120, function()
     if autofish then
         stopping = true
         statusLabel.Text = "Status: ⏳ Stopping..."
@@ -775,16 +1029,22 @@ local teleportLocations = {
         {pos = Vector3.new(3176.4, -1302.9, 1470.4), lookDir = Vector3.new(-0.96, 0.00, 0.26)},
         {pos = Vector3.new(3030.0, -1301.0, 1421.9), lookDir = Vector3.new(0.05, -0.00, 1.00)},
     },
+    
     ["Christmas Island"] = {
       {pos = Vector3.new(1134.9, 24.1, 1557.3), lookDir = Vector3.new(0.85, 0.00, -0.52)},
       {pos = Vector3.new(1163.5, 23.9, 1573.8), lookDir = Vector3.new(-0.34, 0.00, -0.94)},
+    },
+    ["Christmas Cave"] = {
+      {pos = Vector3.new(552.6, -580.6, 8930.5), lookDir = Vector3.new(0.33, -0.00, -0.94)},
+      {pos = Vector3.new(744.2, -487.1, 8862.7), lookDir = Vector3.new(-0.00, 0.00, 1.00)},
+      {pos = Vector3.new(605.1, -580.6, 8922.6), lookDir = Vector3.new(-0.63, -0.00, -0.78)},
     }
 }
 
 -- =========================================================
 -- AUTO GENERATE BUTTONS
 -- =========================================================
-local teleportPriority = {"Christmas Island", "Ocean", "AncientRuin"} 
+local teleportPriority = {"Christmas Island", "Ocean", "Christmas Cave"} 
 local teleportActions = {}
 local yOffset = 40
 
@@ -1432,7 +1692,7 @@ stopBtn.MouseButton1Click:Connect(function()
 end)
 
 -- =========================================================
--- HOOK EQUIP ITEM (Tambahan)
+-- HOOK EQUIP ITEM 
 -- =========================================================
 local ok_mt, mt = pcall(getrawmetatable, game)
 if ok_mt and mt and mt.__namecall then
@@ -1630,15 +1890,14 @@ end
 
 task.delay(5, function()
     if teleportActions["Ocean"] then
-        RemoveAllEffects()
         hidenitop()
+        RemoveAllEffects()
+        task.wait(5)
         teleportActions["Ocean"]()
         task.wait(5)
         startFishing(statusLabel)
     end
 end)
-
-
 
 local VirtualUser = game:GetService("VirtualUser")
 
