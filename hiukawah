@@ -1000,11 +1000,9 @@ end)
 -- =========================================================
 local rods = {
     ["Angler Rod"] = {id = 168, price = "8M Coins"},
-    ["Luck Rod"]   = {id = 79,  price = "350 Coins"},
-    ["Carbon Rod"] = {id = 76,  price = "900 Coins"},
-    ["Grass Rod"]  = {id = 85,  price = "1.5k Coins"},
     ["Astral Rod"] = {id = 5,   price = "1M Coins"},
     ["Ares Rod"]   = {id = 126, price = "3M Coins"},
+    ["Bamboo Rod"] = {id = 258, price = "12M Coins"},
     ["Midnight Rod"] = {id = 80, price = "50k Coins"},
 }
 
@@ -1067,12 +1065,6 @@ end)
 local baits = {
     ["Singularity Bait (8.2M)"]   = 3,
     ["Floral Bait (4M)"]          = 20,
-    ["TopWater Bait (100 Coins)"] = 10,
-    ["Lucky Bait (1k Coins)"]     = 2,
-    ["Midnight Bait (3k Coins)"]  = 3,
-    ["Chroma Bait (290k Coins)"]  = 6,
-    ["Dark Mater Bait (630k)"]    = 8,
-    ["Corrupt Bait (1.15M)"]      = 15,
     ["Aether Bait (3.7M)"]        = 16,
 }
 
